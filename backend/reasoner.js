@@ -31,7 +31,7 @@ function scoreRequest(p) {
   const vulnerableScore = p.has_vulnerable ? 1 : 0;
 
   const people =
-    typeof p.scale === "number" && isFinite(p.scale) ? p.scale : 0;
+    typeof p.people_count === "number" && isFinite(p.people_count) ? p.people_count : 0;
   const scaleScore = people > 20 ? 2 : people > 5 ? 1 : 0;
 
   const score =

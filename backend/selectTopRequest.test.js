@@ -48,15 +48,16 @@ console.log("\nTest 1 — highest score selected (expect score=14)");
 
 // ---------------------------------------------------------------------------
 // Test 2: tie-breaking by people_count — higher wins
-// Both: HIGH urgency only → score = 9
-// A: people_count = 5   B: people_count = 50 → B wins
+// A: HIGH urgency + people_count=5 → score = 9 (scale=0)
+// B: HIGH urgency + people_count=50 → score = 11 (scale=2)
+// B wins because higher score
 // ---------------------------------------------------------------------------
-console.log("\nTest 2 — tie broken by people_count (expect B selected)");
+console.log("\nTest 2 — higher people_count wins (expect B selected)");
 {
-  const A = { urgency: "HIGH", has_medical: false, has_vulnerable: false, scale: 0, people_count: 5 };
-  const B = { urgency: "HIGH", has_medical: false, has_vulnerable: false, scale: 0, people_count: 50 };
+  const A = { urgency: "HIGH", has_medical: false, has_vulnerable: false, people_count: 5 };
+  const B = { urgency: "HIGH", has_medical: false, has_vulnerable: false, people_count: 50 };
   const result = selectTopRequest([A, B]);
-  assert("decision_score", result.decision_score, 9);
+  assert("decision_score", result.decision_score, 11);
   assert("selected is B", result.selected_request === B, true);
 }
 
@@ -148,13 +149,14 @@ console.log("\nTest 9 — rank field with distinct scores");
 
 // ---------------------------------------------------------------------------
 // Test 10: rank field — tied scores share the same rank
-// A and B: score=9 → both rank 1; C: score=3 → rank 3
+// A and B: both HIGH urgency + people_count=5 → score=9 → both rank 1
+// C: LOW urgency → score=3 → rank 3
 // ---------------------------------------------------------------------------
 console.log("\nTest 10 — rank field with tied scores");
 {
-  const A = { urgency: "HIGH", has_medical: false, has_vulnerable: false, scale: 0, people_count: 5 };
-  const B = { urgency: "HIGH", has_medical: false, has_vulnerable: false, scale: 0, people_count: 50 };
-  const C = { urgency: "LOW", has_medical: false, has_vulnerable: false, scale: 0, people_count: 0 };
+  const A = { urgency: "HIGH", has_medical: false, has_vulnerable: false, people_count: 5 };
+  const B = { urgency: "HIGH", has_medical: false, has_vulnerable: false, people_count: 5 };
+  const C = { urgency: "LOW", has_medical: false, has_vulnerable: false, people_count: 0 };
   const result = selectTopRequest([A, B, C]);
   const rankA = result.all_requests.find((r) => r.original === A).rank;
   const rankB = result.all_requests.find((r) => r.original === B).rank;

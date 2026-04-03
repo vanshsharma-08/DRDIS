@@ -37,7 +37,7 @@ function assertNoThrow(label, fn) {
 // ---------------------------------------------------------------------------
 console.log("\nTest 1 — HIGH urgency + medical + 30 people (expect 14)");
 {
-  const result = scoreRequest({ urgency: "HIGH", has_medical: true, has_vulnerable: false, scale: 30 });
+  const result = scoreRequest({ urgency: "HIGH", has_medical: true, has_vulnerable: false, people_count: 30 });
   console.log("  breakdown:", result.breakdown);
   assert("score", result.score, 14);
 }
@@ -48,7 +48,7 @@ console.log("\nTest 1 — HIGH urgency + medical + 30 people (expect 14)");
 // ---------------------------------------------------------------------------
 console.log("\nTest 2 — MEDIUM urgency + vulnerable + 10 people (expect 9)");
 {
-  const result = scoreRequest({ urgency: "MEDIUM", has_medical: false, has_vulnerable: true, scale: 10 });
+  const result = scoreRequest({ urgency: "MEDIUM", has_medical: false, has_vulnerable: true, people_count: 10 });
   console.log("  breakdown:", result.breakdown);
   assert("score", result.score, 9);
 }
@@ -59,7 +59,7 @@ console.log("\nTest 2 — MEDIUM urgency + vulnerable + 10 people (expect 9)");
 // ---------------------------------------------------------------------------
 console.log("\nTest 3 — LOW urgency only (expect 3)");
 {
-  const result = scoreRequest({ urgency: "LOW", has_medical: false, has_vulnerable: false, scale: 3 });
+  const result = scoreRequest({ urgency: "LOW", has_medical: false, has_vulnerable: false, people_count: 3 });
   console.log("  breakdown:", result.breakdown);
   assert("score", result.score, 3);
 }
@@ -95,7 +95,7 @@ assertNoThrow("string", () => {
 // ---------------------------------------------------------------------------
 console.log("\nTest 7 — negative scale → scaleScore=0");
 {
-  const result = scoreRequest({ urgency: "HIGH", has_medical: false, has_vulnerable: false, scale: -10 });
+  const result = scoreRequest({ urgency: "HIGH", has_medical: false, has_vulnerable: false, people_count: -10 });
   console.log("  breakdown:", result.breakdown);
   assert("scaleScore for negative", result.breakdown.scale, 0);
   // score = (3×3)+(0×3)+(0×2)+(0×1) = 9
@@ -107,7 +107,7 @@ console.log("\nTest 7 — negative scale → scaleScore=0");
 // ---------------------------------------------------------------------------
 console.log("\nTest 8 — unknown urgency → fallback LOW (urgencyScore=1)");
 {
-  const result = scoreRequest({ urgency: "CRITICAL", has_medical: false, has_vulnerable: false, scale: 0 });
+  const result = scoreRequest({ urgency: "CRITICAL", has_medical: false, has_vulnerable: false, people_count: 0 });
   console.log("  breakdown:", result.breakdown);
   assert("urgencyScore for unknown", result.breakdown.urgency, 1);
   // score = (1×3) = 3
