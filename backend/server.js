@@ -11,6 +11,8 @@ const cors = require('cors');
 const { processRequests } = require('./processRequests');
 const { scoreRequest, selectTopRequest, generateReasons } = require('./reasoner');
 const { matchVolunteer } = require('./matcher');
+const { getMetrics, resetMetrics } = require('./geminiIntegration');
+const { incrementTotalRequests, incrementFallbackUsage } = require('./geminiIntegration');
 
 const app = express();
 
@@ -34,10 +36,17 @@ app.post('/api/analyze', (req, res) => {
         reasons: ['Invalid input: requests must be a non-empty array.'],
         decision_score: 0,
         all_requests: [],
+        source: 'rule',
       });
     }
 
+    // Increment total requests metric
+    incrementTotalRequests();
+
     const processResult = processRequests(requests);
+
+    // Increment fallback usage metric (rule-based parsing is always used)
+    incrementFallbackUsage();
 
     if (processResult.error) {
       return res.status(400).json({
@@ -46,6 +55,7 @@ app.post('/api/analyze', (req, res) => {
         reasons: ['Input validation failed.', ...(processResult.details || [])],
         decision_score: 0,
         all_requests: [],
+        source: 'rule',
       });
     }
 
@@ -60,6 +70,7 @@ app.post('/api/analyze', (req, res) => {
         reasons: ['No valid requests to process.'],
         decision_score: 0,
         all_requests: [],
+        source: 'rule',
       });
     }
 
@@ -82,6 +93,7 @@ app.post('/api/analyze', (req, res) => {
       reasons,
       decision_score,
       all_requests,
+      source: 'rule',
     });
 
   } catch (error) {
@@ -92,6 +104,7 @@ app.post('/api/analyze', (req, res) => {
       reasons: ['Internal server error. Default emergency response recommended.'],
       decision_score: 0,
       all_requests: [],
+      source: 'rule',
     });
   }
 });
@@ -104,6 +117,26 @@ app.get('/health', (req, res) => {
   }
 });
 
+app.get('/metrics', (req, res) => {
+  try {
+    const metrics = getMetrics();
+    res.status(200).json(metrics);
+  } catch (error) {
+    console.error('Error in /metrics:', error.message);
+    res.status(500).json({ error: 'Failed to retrieve metrics' });
+  }
+});
+
+app.post('/metrics/reset', (req, res) => {
+  try {
+    resetMetrics();
+    res.status(200).json({ message: 'Metrics reset successfully' });
+  } catch (error) {
+    console.error('Error in /metrics/reset:', error.message);
+    res.status(500).json({ error: 'Failed to reset metrics' });
+  }
+});
+
 app.use((req, res) => {
   res.status(404).json({
     selected_request: null,
@@ -111,6 +144,7 @@ app.use((req, res) => {
     reasons: ['Route not found.'],
     decision_score: 0,
     all_requests: [],
+    source: 'rule',
   });
 });
 
@@ -122,6 +156,7 @@ app.use((err, req, res, next) => {
     reasons: ['Unexpected server error.'],
     decision_score: 0,
     all_requests: [],
+    source: 'rule',
   });
 });
 

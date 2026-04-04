@@ -1,14 +1,27 @@
 /**
  * reasoner.js - Scoring logic for disaster response requests
  * Dev2 module: DO NOT modify Dev1 files
+ * 
+ * CORE LOGIC - DO NOT MODIFY
+ * This module contains stable decision functions that must not be changed
+ * without comprehensive test validation.
  */
 
-const URGENCY_MAP = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+// Priority ordering for needs: medical > rescue > food > general
+const NEED_WEIGHTS = {
+  medical: 100,
+  rescue: 80,
+  food: 50,
+  water: 50, // Assuming water is similar to food in priority
+  general: 20,
+};
+
+const URGENCY_MULTIPLIER = { HIGH: 1.5, MEDIUM: 1.2, LOW: 1 }; // Urgency is secondary
 
 /**
- * scoreRequest(p)
- * Scores a parsed request using:
- *   (urgency × 3) + (medical × 3) + (vulnerable × 2) + (scale × 1)
+ * scoreRequest(p) - CORE LOGIC - DO NOT MODIFY
+ * Scores a parsed request based on need priority, people count (log-scaled), and urgency (secondary).
+ * Medical > rescue > food > general.
  *
  * @param {object} p - parsed request object
  * @returns {{ score: number, breakdown: object }}
@@ -16,45 +29,52 @@ const URGENCY_MAP = { HIGH: 3, MEDIUM: 2, LOW: 1 };
 function scoreRequest(p) {
   if (!p || typeof p !== "object") {
     return {
-      score: 3,
-      breakdown: { urgency: 1, medical: 0, vulnerable: 0, scale: 0 },
+      score: 0,
+      breakdown: { need: 0, people: 0, urgency_multiplier: 0 },
     };
   }
 
-  const urgencyRaw =
-    typeof p.urgency === "string" ? p.urgency.toUpperCase() : "";
-  const urgencyScore =
-    urgencyRaw in URGENCY_MAP ? URGENCY_MAP[urgencyRaw] : 1;
+  // 1. Determine primary score from needs
+  let needScore = 0;
+  if (Array.isArray(p.needs) && p.needs.length > 0) {
+    p.needs.forEach(need => {
+      needScore = Math.max(needScore, NEED_WEIGHTS[need] || NEED_WEIGHTS.general);
+    });
+  } else {
+    needScore = NEED_WEIGHTS.general; // Default if no needs specified
+  }
 
-  const medicalScore = p.has_medical ? 1 : 0;
+  // Medical needs override if present
+  if (p.has_medical) {
+    needScore = Math.max(needScore, NEED_WEIGHTS.medical);
+  }
 
-  const vulnerableScore = p.has_vulnerable ? 1 : 0;
+  // 2. Add people count, with log scaling
+  const people = typeof p.people_count === "number" && isFinite(p.people_count) && p.people_count > 0
+    ? p.people_count
+    : 0;
+  const peopleScore = people > 0 ? Math.log10(people + 1) * 10 : 0; // Log scale, *10 for better weight
 
-  const people =
-    typeof p.people_count === "number" && isFinite(p.people_count) ? p.people_count : 0;
-  const scaleScore = people > 20 ? 2 : people > 5 ? 1 : 0;
+  // 3. Apply urgency as a secondary multiplier
+  const urgencyRaw = typeof p.urgency === "string" ? p.urgency.toUpperCase() : "LOW";
+  const urgencyMultiplier = URGENCY_MULTIPLIER[urgencyRaw] || URGENCY_MULTIPLIER.LOW;
 
-  const score =
-    urgencyScore * 3 +
-    medicalScore * 3 +
-    vulnerableScore * 2 +
-    scaleScore * 1;
+  const score = (needScore + peopleScore) * urgencyMultiplier;
 
   return {
-    score,
+    score: Number(score.toFixed(2)), // Round ONLY at final step
     breakdown: {
-      urgency: urgencyScore,
-      medical: medicalScore,
-      vulnerable: vulnerableScore,
-      scale: scaleScore,
+      need: needScore,
+      people: peopleScore, // Keep full precision
+      urgency_multiplier: urgencyMultiplier,
     },
   };
 }
 
 /**
- * selectTopRequest(requests)
+ * selectTopRequest(requests) - CORE LOGIC - DO NOT MODIFY
  * Scores all requests and selects the highest-scoring one.
- * Tie-breaking: higher people_count wins → earlier index wins.
+ * Deterministic sorting: score DESC → need priority → people_count
  *
  * @param {Array} requests - array of parsed request objects
  * @returns {{ selected_request: object|null, decision_score: number, all_requests: Array }}
@@ -70,10 +90,33 @@ function selectTopRequest(requests) {
     rank: 0,
   }));
 
+  // Helper to get highest need priority
+  function getNeedPriority(needs) {
+    if (!Array.isArray(needs) || needs.length === 0) return NEED_WEIGHTS.general; // Changed from NEED_PRIORITY
+    let highest = 0;
+    needs.forEach(need => {
+      const priority = NEED_WEIGHTS[need] || NEED_WEIGHTS.general; // Changed from NEED_PRIORITY
+      if (priority > highest) highest = priority;
+    });
+    return highest;
+  }
+
   // Assign ranks by score descending (same score → same rank)
   const sorted = all_requests
-    .map((entry, idx) => ({ idx, score: entry.score }))
-    .sort((a, b) => b.score - a.score);
+    .map((entry, idx) => ({ 
+      idx, 
+      score: entry.score,
+      needPriority: getNeedPriority(entry.original.needs),
+      peopleCount: entry.original.people_count || 0
+    }))
+    .sort((a, b) => {
+      // Primary: score DESC
+      if (b.score !== a.score) return b.score - a.score;
+      // Secondary: need priority DESC
+      if (b.needPriority !== a.needPriority) return b.needPriority - a.needPriority;
+      // Tertiary: people count DESC
+      return b.peopleCount - a.peopleCount;
+    });
 
   let currentRank = 1;
   for (let i = 0; i < sorted.length; i++) {
@@ -83,30 +126,9 @@ function selectTopRequest(requests) {
     all_requests[sorted[i].idx].rank = currentRank;
   }
 
-  let topIdx = 0;
-  for (let i = 1; i < all_requests.length; i++) {
-    const curr = all_requests[i];
-    const best = all_requests[topIdx];
-
-    if (curr.score > best.score) {
-      topIdx = i;
-    } else if (curr.score === best.score) {
-      const currPeople =
-        typeof curr.original.people_count === "number" &&
-        isFinite(curr.original.people_count)
-          ? curr.original.people_count
-          : 0;
-      const bestPeople =
-        typeof best.original.people_count === "number" &&
-        isFinite(best.original.people_count)
-          ? best.original.people_count
-          : 0;
-      if (currPeople > bestPeople) {
-        topIdx = i;
-      }
-      // equal people_count → earlier index (topIdx) wins; no update
-    }
-  }
+  // Select top request using deterministic sorting
+  const topEntry = sorted[0];
+  const topIdx = topEntry.idx;
 
   return {
     selected_request: all_requests[topIdx].original,
@@ -116,7 +138,7 @@ function selectTopRequest(requests) {
 }
 
 /**
- * generateReasons(request, score, volunteer)
+ * generateReasons(request, score, volunteer) - CORE LOGIC - DO NOT MODIFY
  * Produces human-readable reasons explaining why a request was selected
  * and why a volunteer was assigned.
  *
@@ -213,3 +235,9 @@ function generateReasons(request, score, volunteer) {
 }
 
 module.exports = { scoreRequest, selectTopRequest, generateReasons };
+
+// SAFEGUARD: Any changes to this file require:
+// 1. All existing tests to pass
+// 2. New test cases for any modified behavior
+// 3. Review by senior engineer
+// 4. Documentation of changes

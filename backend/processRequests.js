@@ -31,6 +31,22 @@ const PRIORITY_REASON_MAP = {
 // ─── Helper Functions ─────────────────────────────────────────────────────────
 
 /**
+ * Splits text by comma, +, and to process segments independently.
+ * @param {string} text
+ * @returns {string[]}
+ */
+function splitTextIntoSegments(text) {
+  if (typeof text !== 'string') return [];
+  
+  // Split by comma, +, and (case-insensitive)
+  const segments = text.split(/[,+]|and/gi)
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+  
+  return segments;
+}
+
+/**
  * Parses all validated requests using fallbackParse.
  * Always returns an array of the same length as input.
  * Never throws.
@@ -44,9 +60,112 @@ function parseAllRequests(requests) {
   const results = [];
   for (let i = 0; i < requests.length; i++) {
     const text = requests[i] && typeof requests[i].text === 'string' ? requests[i].text : '';
-    results.push(fallbackParse(text));
+    
+    // Split into segments and parse each independently
+    const segments = splitTextIntoSegments(text);
+    let parsed;
+    if (segments.length === 0) {
+      parsed = fallbackParse(text);
+    } else {
+      // Parse each segment and merge results
+      const parsedSegments = segments.map(seg => fallbackParse(seg));
+      parsed = mergeParsedSegments(parsedSegments);
+    }
+    
+    // Ensure needs array is not empty
+    if (parsed.needs.length === 0) {
+      parsed.needs = ['general'];
+    }
+    
+    results.push(parsed);
   }
   return results;
+}
+
+/**
+ * Merges multiple parsed segments into a single parsed object.
+ * Combines needs, takes highest urgency, sums people_count, etc.
+ * @param {Array<object>} segments
+ * @returns {object}
+ */
+function mergeParsedSegments(segments) {
+  if (segments.length === 0) {
+    return fallbackParse('');
+  }
+  
+  if (segments.length === 1) {
+    return segments[0];
+  }
+  
+  // Merge logic
+  const merged = {
+    urgency: 'LOW',
+    needs: [],
+    people_count: 0,
+    location: null,
+    severity_reason: '',
+    has_medical: false,
+    has_vulnerable: false,
+  };
+  
+  // Priority: HIGH > MEDIUM > LOW
+  const urgencyOrder = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+  let highestUrgency = 'LOW';
+  
+  segments.forEach(seg => {
+    // Merge urgency (highest wins)
+    if (urgencyOrder[seg.urgency] > urgencyOrder[highestUrgency]) {
+      highestUrgency = seg.urgency;
+    }
+    
+    // Merge needs (unique)
+    seg.needs.forEach(need => {
+      if (!merged.needs.includes(need)) {
+        merged.needs.push(need);
+      }
+    });
+    
+    // Sum people_count
+    merged.people_count += seg.people_count || 0;
+    
+    // Merge medical/vulnerable flags (OR logic)
+    merged.has_medical = merged.has_medical || seg.has_medical;
+    merged.has_vulnerable = merged.has_vulnerable || seg.has_vulnerable;
+  });
+  
+  merged.urgency = highestUrgency;
+  
+  // Ensure needs array is not empty
+  if (merged.needs.length === 0) {
+    merged.needs = ['general'];
+  }
+  
+  // Rebuild severity reason
+  merged.severity_reason = buildSeverityReason(
+    merged.urgency,
+    merged.needs,
+    merged.has_medical,
+    merged.has_vulnerable,
+    merged.people_count
+  );
+  
+  return merged;
+}
+
+// Helper function (copied from fallbackParse.js for use in merge)
+function buildSeverityReason(urgency, needs, hasMedical, hasVulnerable, peopleCount) {
+  const needType = needs.includes('medical') ? 'medical' :
+                   needs.includes('rescue') ? 'rescue' :
+                   needs.includes('food') || needs.includes('water') ? 'food' : 'general';
+  
+  const needReason = needType === 'medical' ? 'critical medical need and immediate risk' :
+                     needType === 'rescue' ? 'people being trapped and requiring immediate rescue' :
+                     needType === 'food' ? 'basic survival needs' : 'general assistance needed';
+  
+  const peopleText = peopleCount === 1 ? '1 person' :
+                     peopleCount > 1 ? `${peopleCount} people` : 'unknown number of people';
+  
+  return `Detected ${urgency} urgency ${needType} situation affecting ${peopleText}. Prioritized due to ${needReason}.`;
 }
 
 /**

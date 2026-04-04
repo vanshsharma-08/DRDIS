@@ -32,36 +32,36 @@ function assertNoThrow(label, fn) {
 }
 
 // ---------------------------------------------------------------------------
-// Test 1: HIGH urgency + medical + 30 people → score = 14
-// (3×3) + (1×3) + (0×2) + (2×1) = 9+3+0+2 = 14
+// Test 1: Medical, 30 people, HIGH urgency
+// Expected: (100 + log10(31)*10) * 1.5 = (100 + 14.91) * 1.5 = 172.37
 // ---------------------------------------------------------------------------
-console.log("\nTest 1 — HIGH urgency + medical + 30 people (expect 14)");
+console.log("\nTest 1 — Medical, 30 people, HIGH urgency (expect 172.37)");
 {
-  const result = scoreRequest({ urgency: "HIGH", has_medical: true, has_vulnerable: false, people_count: 30 });
+  const result = scoreRequest({ urgency: "HIGH", needs: ["medical"], people_count: 30 });
   console.log("  breakdown:", result.breakdown);
-  assert("score", result.score, 14);
+  assert("score", result.score, 172.37);
 }
 
 // ---------------------------------------------------------------------------
-// Test 2: MEDIUM urgency + vulnerable + 10 people → score = 9
-// (2×3) + (0×3) + (1×2) + (1×1) = 6+0+2+1 = 9
+// Test 2: Rescue, 10 people, MEDIUM urgency
+// Expected: (80 + log10(11)*10) * 1.2 = (80 + 10.41) * 1.2 = 108.50
 // ---------------------------------------------------------------------------
-console.log("\nTest 2 — MEDIUM urgency + vulnerable + 10 people (expect 9)");
+console.log("\nTest 2 — Rescue, 10 people, MEDIUM urgency (expect 108.50)");
 {
-  const result = scoreRequest({ urgency: "MEDIUM", has_medical: false, has_vulnerable: true, people_count: 10 });
+  const result = scoreRequest({ urgency: "MEDIUM", needs: ["rescue"], people_count: 10 });
   console.log("  breakdown:", result.breakdown);
-  assert("score", result.score, 9);
+  assert("score", result.score, 108.50);
 }
 
 // ---------------------------------------------------------------------------
-// Test 3: LOW urgency, no medical, no vulnerable, ≤5 people → score = 3
-// (1×3) + (0×3) + (0×2) + (0×1) = 3
+// Test 3: Food, 3 people, LOW urgency
+// Expected: (50 + log10(4)*10) * 1 = (50 + 6.02) * 1 = 56.02
 // ---------------------------------------------------------------------------
-console.log("\nTest 3 — LOW urgency only (expect 3)");
+console.log("\nTest 3 — Food, 3 people, LOW urgency (expect 56.02)");
 {
-  const result = scoreRequest({ urgency: "LOW", has_medical: false, has_vulnerable: false, people_count: 3 });
+  const result = scoreRequest({ urgency: "LOW", needs: ["food"], people_count: 3 });
   console.log("  breakdown:", result.breakdown);
-  assert("score", result.score, 3);
+  assert("score", result.score, 56.02);
 }
 
 // ---------------------------------------------------------------------------
@@ -71,47 +71,47 @@ console.log("\nTest 4 — empty object (no crash expected)");
 assertNoThrow("empty object", () => scoreRequest({}));
 
 // ---------------------------------------------------------------------------
-// Test 5: null input → must not crash, score = 3 (LOW baseline)
+// Test 5: null input → must not crash, score = 0 (default baseline)
 // ---------------------------------------------------------------------------
-console.log("\nTest 5 — null input (no crash, score=3 expected)");
+console.log("\nTest 5 — null input (no crash, score=0 expected)");
 assertNoThrow("null", () => {
   const result = scoreRequest(null);
-  assert("score on null", result.score, 3);
+  assert("score on null", result.score, 0);
   return result;
 });
 
 // ---------------------------------------------------------------------------
-// Test 6: string input → must not crash, score = 3 (LOW baseline)
+// Test 6: string input → must not crash, score = 0 (default baseline)
 // ---------------------------------------------------------------------------
-console.log("\nTest 6 — string input (no crash, score=3 expected)");
+console.log("\nTest 6 — string input (no crash, score=0 expected)");
 assertNoThrow("string", () => {
   const result = scoreRequest("disaster area");
-  assert("score on string", result.score, 3);
+  assert("score on string", result.score, 0);
   return result;
 });
 
 // ---------------------------------------------------------------------------
-// Test 7: negative scale → treated as 0, scaleScore = 0
+// Test 7: negative people_count → treated as 0, peopleScore = 0
+// Expected: (20 + 0) * 1.5 = 30
 // ---------------------------------------------------------------------------
-console.log("\nTest 7 — negative scale → scaleScore=0");
+console.log("\nTest 7 — negative people_count → peopleScore=0");
 {
-  const result = scoreRequest({ urgency: "HIGH", has_medical: false, has_vulnerable: false, people_count: -10 });
+  const result = scoreRequest({ urgency: "HIGH", needs: ["general"], people_count: -10 });
   console.log("  breakdown:", result.breakdown);
-  assert("scaleScore for negative", result.breakdown.scale, 0);
-  // score = (3×3)+(0×3)+(0×2)+(0×1) = 9
-  assert("score with negative scale", result.score, 9);
+  assert("people for negative", result.breakdown.people, 0);
+  assert("score with negative people_count", result.score, 30);
 }
 
 // ---------------------------------------------------------------------------
-// Test 8: unknown urgency → fallback to LOW (urgencyScore = 1)
+// Test 8: unknown urgency → fallback to LOW multiplier (1)
+// Expected: (20 + 0) * 1 = 20
 // ---------------------------------------------------------------------------
-console.log("\nTest 8 — unknown urgency → fallback LOW (urgencyScore=1)");
+console.log("\nTest 8 — unknown urgency → fallback LOW (multiplier=1)");
 {
-  const result = scoreRequest({ urgency: "CRITICAL", has_medical: false, has_vulnerable: false, people_count: 0 });
+  const result = scoreRequest({ urgency: "CRITICAL", needs: ["general"], people_count: 0 });
   console.log("  breakdown:", result.breakdown);
-  assert("urgencyScore for unknown", result.breakdown.urgency, 1);
-  // score = (1×3) = 3
-  assert("score with unknown urgency", result.score, 3);
+  assert("urgency_multiplier for unknown", result.breakdown.urgency_multiplier, 1);
+  assert("score with unknown urgency", result.score, 20);
 }
 
 // ---------------------------------------------------------------------------

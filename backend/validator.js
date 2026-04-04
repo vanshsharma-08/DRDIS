@@ -9,6 +9,13 @@ const MAX_REQUESTS = 10;
 const MIN_TEXT_LENGTH = 1;
 const MAX_TEXT_LENGTH = 300;
 
+// Valid disaster request keywords for classification
+const VALID_KEYWORDS = [
+  'help', 'rescue', 'medical', 'food', 'water', 'shelter', 'emergency',
+  'injured', 'trapped', 'stuck', 'fire', 'flood', 'earthquake', 'need',
+  'urgent', 'immediate', 'supply', 'medicine', 'evacuate', 'safe'
+];
+
 /**
  * Validates an array of disaster response requests.
  *
@@ -104,4 +111,52 @@ function validateInput(requests) {
   };
 }
 
-module.exports = { validateInput };
+/**
+ * Sanitizes raw input text according to DRDIS rules
+ * 
+ * @param {string} input - Raw input string
+ * @returns {string} Cleaned and normalized input
+ */
+function sanitizeInput(input) {
+  if (typeof input !== 'string') return '';
+
+  let cleaned = input;
+
+  // 1. Optional truncation for inputs > 300 chars (do not reject)
+  if (cleaned.length > MAX_TEXT_LENGTH) {
+    cleaned = cleaned.substring(0, MAX_TEXT_LENGTH);
+  }
+
+  // 2. Detect and round decimal numbers BEFORE cleaning special characters
+  // This prevents corruption like "3.7" becoming "37"
+  cleaned = cleaned.replace(/\d+\.\d+/g, (match) => {
+    return String(Math.round(parseFloat(match)));
+  });
+
+  // 3. Remove special characters except commas, plus signs, letters, numbers, spaces
+  // Preserves + and , for splitting, removes other symbols safely
+  cleaned = cleaned.replace(/[^a-zA-Z0-9\s,+]/g, '');
+
+  // 4. Normalize whitespace: replace multiple spaces/newlines with single space
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+
+  return cleaned;
+}
+
+/**
+ * Checks if input contains valid disaster response keywords
+ * 
+ * @param {string} input - Sanitized input string
+ * @returns {boolean} True if input contains at least one valid keyword
+ */
+function isValidInput(input) {
+  if (typeof input !== 'string') return false;
+  if (input.length < MIN_TEXT_LENGTH || input.length > MAX_TEXT_LENGTH) return false;
+
+  const lowerInput = input.toLowerCase();
+
+  // Check for at least one valid keyword
+  return VALID_KEYWORDS.some(keyword => lowerInput.includes(keyword));
+}
+
+module.exports = { validateInput, sanitizeInput, isValidInput };

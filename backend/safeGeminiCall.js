@@ -124,15 +124,18 @@ function extractSimulatedLocation(text) {
 }
 
 function buildSimulatedReason(urgency, needs, hasMedical, hasVulnerable, peopleCount) {
-  const parts = [];
-  if (urgency === 'HIGH') parts.push('high-urgency keywords detected');
-  else if (urgency === 'LOW') parts.push('low-urgency keywords detected');
-  else parts.push('moderate urgency detected');
-  if (needs.length > 0) parts.push(`needs identified: ${needs.join(', ')}`);
-  if (hasMedical) parts.push('medical attention required');
-  if (hasVulnerable) parts.push('vulnerable individuals present');
-  if (peopleCount > 1) parts.push(`${peopleCount} people affected`);
-  return parts.join('; ');
+  const needType = needs.includes('medical') ? 'medical' :
+                   needs.includes('rescue') ? 'rescue' :
+                   needs.includes('food') || needs.includes('water') ? 'food' : 'general';
+  
+  const needReason = needType === 'medical' ? 'critical medical need and immediate risk' :
+                     needType === 'rescue' ? 'people being trapped and requiring immediate rescue' :
+                     needType === 'food' ? 'basic survival needs' : 'general assistance needed';
+  
+  const peopleText = peopleCount === 1 ? '1 person' :
+                     peopleCount > 1 ? `${peopleCount} people` : 'unknown number of people';
+  
+  return `Detected ${urgency} urgency ${needType} situation affecting ${peopleText}. Prioritized due to ${needReason}.`;
 }
 
 // ─── Schema Validation ────────────────────────────────────────────────────────
