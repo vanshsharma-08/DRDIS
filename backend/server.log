@@ -1,0 +1,203 @@
+◇ injecting env (1) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+DRDIS running on port 3001
+[DRDIS] SAFE INPUT: [ { text: 'hello' } ]
+[DRDIS] ANY VAGUE: true
+🔥 GEMINI PATH (HARD STOP)
+[DRDIS] SAFE INPUT: [ { text: 'I am walking down the street to buy apples.' } ]
+[DRDIS] ANY VAGUE: true
+🔥 GEMINI PATH (HARD STOP)
+[DRDIS] SAFE INPUT: [ { text: '5 people trapped in fire, need rescue immediately.' } ]
+[DRDIS] ANY VAGUE: false
+🚨 ENTERING RULE ENGINE
+confidence: 0.8
+confidence: 0.3
+source: gemini
+[DRDIS] SAFE INPUT: []
+[DRDIS] SAFE INPUT: [ { text: '50 people trapped need rescue, food shortage' } ]
+[DRDIS] ANY VAGUE: false
+🚨 ENTERING RULE ENGINE
+confidence: 0.8
+confidence: 0.3
+source: gemini
+[DRDIS] SAFE INPUT: [ { text: '10 injured, 1000 homeless, 2 trapped' } ]
+[DRDIS] ANY VAGUE: false
+🚨 ENTERING RULE ENGINE
+confidence: 0.8
+confidence: 0.3
+source: gemini
+confidence: 0.8
+[DRDIS] SAFE INPUT: [ { text: '20 people need rescue' } ]
+[DRDIS] ANY VAGUE: false
+🚨 ENTERING RULE ENGINE
+confidence: 0.3
+source: gemini
+[DRDIS] SAFE INPUT: [ { text: 'help' } ]
+[DRDIS] ANY VAGUE: true
+🔥 GEMINI PATH (HARD STOP)
+[DRDIS] SAFE INPUT: []
+[DRDIS] SAFE INPUT: []
+[DRDIS] SAFE INPUT: [ { text: '50 trapped and food shortage and medical' } ]
+[DRDIS] ANY VAGUE: false
+🚨 ENTERING RULE ENGINE
+confidence: 0.8
+confidence: 0.3
+source: gemini
+[DRDIS] SAFE INPUT: [ { text: '20 injured and 50 trapped and no food' } ]
+[DRDIS] ANY VAGUE: false
+🚨 ENTERING RULE ENGINE
+confidence: 0.8
+confidence: 0.3
+source: gemini
+[DRDIS] SAFE INPUT: [ { text: 'many people need help' } ]
+[DRDIS] ANY VAGUE: false
+🚨 ENTERING RULE ENGINE
+confidence: 0.3
+source: gemini
+[DRDIS] SAFE INPUT: [ { text: 'fifty people trapped' } ]
+[DRDIS] ANY VAGUE: false
+🚨 ENTERING RULE ENGINE
+confidence: 0.3
+source: gemini
+[DRDIS] SAFE INPUT: [ { text: '10k people need help' } ]
+[DRDIS] ANY VAGUE: false
+🚨 ENTERING RULE ENGINE
+confidence: 0.3
+source: gemini
+[DRDIS] SAFE INPUT: [ { text: '-10 people injured' } ]
+[DRDIS] ANY VAGUE: false
+🚨 ENTERING RULE ENGINE
+confidence: 0.8
+[DRDIS] SAFE INPUT: [ { text: '50 trapped, 1000 medical' } ]
+[DRDIS] ANY VAGUE: false
+🚨 ENTERING RULE ENGINE
+confidence: 0.3
+source: gemini
+[DRDIS] SAFE INPUT: [ { text: '50 trapped urgent, 50 need food' } ]
+[DRDIS] ANY VAGUE: false
+🚨 ENTERING RULE ENGINE
+confidence: 0.8
+confidence: 0.8
+[DRDIS] SAFE INPUT: [ { text: '50 trapped, 50 trapped' } ]
+[DRDIS] ANY VAGUE: false
+🚨 ENTERING RULE ENGINE
+[DRDIS] SAFE INPUT: [ { text: '50 trapped' }, { text: '50 trapped' } ]
+[DRDIS] ANY VAGUE: true
+🔥 GEMINI PATH (HARD STOP)
+[DRDIS] SAFE INPUT: [ { text: 'asdkjashd' } ]
+[DRDIS] ANY VAGUE: true
+🔥 GEMINI PATH (HARD STOP)
+[DRDIS] SAFE INPUT: [ { text: '123456' } ]
+[DRDIS] ANY VAGUE: true
+🔥 GEMINI PATH (HARD STOP)
+[DRDIS] SAFE INPUT: [ { text: '!!! @@' } ]
+[DRDIS] ANY VAGUE: true
+🔥 GEMINI PATH (HARD STOP)
+[DRDIS] SAFE INPUT: [ { text: 'people need help urgently' } ]
+[DRDIS] ANY VAGUE: false
+🚨 ENTERING RULE ENGINE
+confidence: 0.3
+source: gemini
+[DRDIS] SAFE INPUT: [ { text: '100 trapped urgent, 200 food, 50 injured' } ]
+[DRDIS] ANY VAGUE: false
+🚨 ENTERING RULE ENGINE
+confidence: 0.8
+confidence: 0.8
+confidence: 0.8
+[DRDIS] SAFE INPUT: [ { text: '50 trapped urgent' } ]
+[DRDIS] ANY VAGUE: false
+🚨 ENTERING RULE ENGINE
+[DRDIS] SAFE INPUT: [ { text: 'help with something' } ]
+[DRDIS] ANY VAGUE: false
+🚨 ENTERING RULE ENGINE
+confidence: 0.3
+source: gemini
+[DRDIS] SAFE INPUT: [
+  {
+    text: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+  }
+]
+[DRDIS] ANY VAGUE: true
+🔥 GEMINI PATH (HARD STOP)
+[DRDIS] SAFE INPUT: [
+  { text: '1 trapped' },
+  { text: '2 injured' },
+  { text: '3 hungry' },
+  { text: '4 homeless' },
+  { text: '5 need water' },
+  { text: '6 need shelter' }
+]
+[DRDIS] ANY VAGUE: true
+🔥 GEMINI PATH (HARD STOP)
+[DRDIS] SAFE INPUT: [ { text: '50 trapped' } ]
+[DRDIS] ANY VAGUE: true
+🔥 GEMINI PATH (HARD STOP)
+[DRDIS] SAFE INPUT: [ { text: '50 trapped' } ]
+[DRDIS] ANY VAGUE: true
+🔥 GEMINI PATH (HARD STOP)
+[DRDIS] SAFE INPUT: [ { text: '200 trapped, 500 food, 5 injured' } ]
+[DRDIS] ANY VAGUE: false
+🚨 ENTERING RULE ENGINE
+confidence: 0.8
+confidence: 0.8
+[Gemini Integration] Rate limit exceeded for IP: default
+[DRDIS] SAFE INPUT: [ { text: 'help' }, { text: '1000' }, { text: 'asdasd' } ]
+[DRDIS] ANY VAGUE: true
+🔥 GEMINI PATH (HARD STOP)
+[DRDIS] SAFE INPUT: [
+  { text: '50 trapped and food shortage' },
+  { text: '1000 homeless' },
+  { text: 'urgent help needed' }
+]
+[DRDIS] ANY VAGUE: true
+🔥 GEMINI PATH (HARD STOP)
+[DRDIS] SAFE INPUT: [ { text: '50 personas atrapadas' } ]
+[DRDIS] ANY VAGUE: true
+🔥 GEMINI PATH (HARD STOP)
+[DRDIS] SAFE INPUT: [ { text: '2.5 injured' } ]
+[DRDIS] ANY VAGUE: true
+🔥 GEMINI PATH (HARD STOP)
+[DRDIS] SAFE INPUT: [ { text: '500 food not urgent, 5 trapped urgent' } ]
+[DRDIS] ANY VAGUE: false
+🚨 ENTERING RULE ENGINE
+[Gemini Integration] Rate limit exceeded for IP: default
+[Gemini Integration] Rate limit exceeded for IP: default
+[DRDIS] SAFE INPUT: [ { text: '50 trapped urgent' } ]
+[DRDIS] ANY VAGUE: false
+🚨 ENTERING RULE ENGINE
+[Gemini Integration] Rate limit exceeded for IP: default
+[DRDIS] SAFE INPUT: [ { text: '50 trapped urgent' } ]
+[DRDIS] ANY VAGUE: false
+🚨 ENTERING RULE ENGINE
+[Gemini Integration] Rate limit exceeded for IP: default
+[DRDIS] SAFE INPUT: [ { text: '50 trapped urgent' } ]
+[DRDIS] ANY VAGUE: false
+🚨 ENTERING RULE ENGINE
+[Gemini Integration] Rate limit exceeded for IP: default
+[DRDIS] SAFE INPUT: [ { text: '50 trapped urgent' } ]
+[DRDIS] ANY VAGUE: false
+🚨 ENTERING RULE ENGINE
+[Gemini Integration] Rate limit exceeded for IP: default
+[DRDIS] SAFE INPUT: [ { text: '50 trapped urgent' } ]
+[DRDIS] ANY VAGUE: false
+🚨 ENTERING RULE ENGINE
+[Gemini Integration] Rate limit exceeded for IP: default
+[DRDIS] SAFE INPUT: [ { text: '50 trapped urgent' } ]
+[DRDIS] ANY VAGUE: false
+🚨 ENTERING RULE ENGINE
+[Gemini Integration] Rate limit exceeded for IP: default
+[DRDIS] SAFE INPUT: [ { text: '$500 medicine' } ]
+[DRDIS] ANY VAGUE: true
+🔥 GEMINI PATH (HARD STOP)
+[DRDIS] SAFE INPUT: [ { text: '10 trapped oxygen 30 min' } ]
+[DRDIS] ANY VAGUE: false
+🚨 ENTERING RULE ENGINE
+[Gemini Integration] Rate limit exceeded for IP: default
+[DRDIS] SAFE INPUT: [ { text: '20 children, 15 elderly' } ]
+[DRDIS] ANY VAGUE: true
+🔥 GEMINI PATH (HARD STOP)
+[DRDIS] SAFE INPUT: [
+  { text: 'Hospital A water shortage' },
+  { text: 'Hospital A power outage' }
+]
+[DRDIS] ANY VAGUE: true
+🔥 GEMINI PATH (HARD STOP)

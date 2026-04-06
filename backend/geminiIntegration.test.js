@@ -187,7 +187,7 @@ async function runTests() {
   console.log(`Results: ${passed} passed, ${failed} failed`);
   console.log(`─────────────────────────────\n`);
 }
-
+console.log("🔥 GEMINI API CALLED 🔥");
 // Run tests
 runTests().catch(err => {
   console.error("Test error:", err);

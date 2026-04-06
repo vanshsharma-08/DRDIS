@@ -12,7 +12,7 @@
  */
 
 const { validateInput } = require('./validator');
-const { fallbackParse } = require('./fallbackParse');
+const { parseWithGemini } = require('./geminiIntegration');
 
 // ─── Priority Constants ───────────────────────────────────────────────────────
 
@@ -47,14 +47,14 @@ function splitTextIntoSegments(text) {
 }
 
 /**
- * Parses all validated requests using fallbackParse.
+ * Parses all validated requests using parseWithGemini.
  * Always returns an array of the same length as input.
  * Never throws.
  *
  * @param {Array<{ text: string }>} requests - Validated request objects
- * @returns {Array<object>} - Parsed results from fallbackParse
+ * @returns {Promise<Array<{ parsedData: object, source: string }>>} - Parsed results from parseWithGemini with source
  */
-function parseAllRequests(requests) {
+async function parseAllRequests(requests) {
   if (!Array.isArray(requests)) return [];
 
   const results = [];
@@ -64,11 +64,22 @@ function parseAllRequests(requests) {
     // Split into segments and parse each independently
     const segments = splitTextIntoSegments(text);
     let parsed;
+    let source = 'rule'; // Default source
     if (segments.length === 0) {
-      parsed = fallbackParse(text);
+      const result = await parseWithGemini(text);
+      parsed = result.parsedData;
+      source = result.source;
     } else {
       // Parse each segment and merge results
-      const parsedSegments = segments.map(seg => fallbackParse(seg));
+      const parsedSegments = [];
+      for (const seg of segments) {
+        const result = await parseWithGemini(seg);
+        parsedSegments.push(result.parsedData);
+        // Use the source from the first segment
+        if (i === 0) {
+          source = result.source;
+        }
+      }
       parsed = mergeParsedSegments(parsedSegments);
     }
     
@@ -77,7 +88,7 @@ function parseAllRequests(requests) {
       parsed.needs = ['general'];
     }
     
-    results.push(parsed);
+    results.push({ parsedData: parsed, source });
   }
   return results;
 }
@@ -162,8 +173,12 @@ function buildSeverityReason(urgency, needs, hasMedical, hasVulnerable, peopleCo
                      needType === 'rescue' ? 'people being trapped and requiring immediate rescue' :
                      needType === 'food' ? 'basic survival needs' : 'general assistance needed';
   
-  const peopleText = peopleCount === 1 ? '1 person' :
-                     peopleCount > 1 ? `${peopleCount} people` : 'unknown number of people';
+  const peopleText =
+    peopleCount === 1
+      ? "1 person"
+      : peopleCount > 1
+      ? `${peopleCount} people`
+      : "unknown number of people";
   
   return `Detected ${urgency} urgency ${needType} situation affecting ${peopleText}. Prioritized due to ${needReason}.`;
 }
@@ -225,11 +240,12 @@ function assignPriority(parsed) {
  *     original_text: string,
  *     parsed: object,
  *     priority: string,
- *     priority_reason: string
+ *     priority_reason: string,
+ *     source: string
  *   }>
  * }}
  */
-function processRequests(requests) {
+async function processRequests(requests) {
   // Step 1: Validate input
   const validation = validateInput(requests);
 
@@ -244,13 +260,14 @@ function processRequests(requests) {
   const normalized = validation.data;
 
   // Step 3: Parse all requests
-  const parsedResults = parseAllRequests(normalized);
+  const parsedResults = await parseAllRequests(normalized);
 
   // Step 4: Assign priority for each parsed result
   const processed = [];
   for (let i = 0; i < normalized.length; i++) {
     const originalText = normalized[i].text;
-    const parsed = parsedResults[i];
+    const parsed = parsedResults[i].parsedData;
+    const source = parsedResults[i].source;
     const { priority, priority_reason } = assignPriority(parsed);
 
     processed.push({
@@ -258,6 +275,7 @@ function processRequests(requests) {
       parsed,
       priority,
       priority_reason,
+      source,
     });
   }
 
