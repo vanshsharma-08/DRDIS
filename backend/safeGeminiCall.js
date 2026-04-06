@@ -132,8 +132,12 @@ function buildSimulatedReason(urgency, needs, hasMedical, hasVulnerable, peopleC
                      needType === 'rescue' ? 'people being trapped and requiring immediate rescue' :
                      needType === 'food' ? 'basic survival needs' : 'general assistance needed';
   
-  const peopleText = peopleCount === 1 ? '1 person' :
-                     peopleCount > 1 ? `${peopleCount} people` : 'unknown number of people';
+  const peopleText =
+    peopleCount === 1
+      ? "1 person"
+      : peopleCount > 1
+      ? `${peopleCount} people`
+      : "unknown number of people";
   
   return `Detected ${urgency} urgency ${needType} situation affecting ${peopleText}. Prioritized due to ${needReason}.`;
 }

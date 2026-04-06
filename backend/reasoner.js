@@ -156,27 +156,44 @@ function generateReasons(request, score, volunteer) {
   const safeScore = typeof score === "number" && isFinite(score) ? score : 0;
 
   // Reason 1: why this request was selected
+  const urgency = typeof r.urgency === "string" && r.urgency !== "" ? r.urgency : null;
+  const requestNeeds = Array.isArray(r.needs) ? r.needs.filter((n) => typeof n === "string") : [];
+  const primaryNeed = requestNeeds.length > 0 ? requestNeeds[0] : "general";
+  
   if (safeScore >= 9) {
-    reasons.push(
-      "This request scored " +
-        safeScore +
-        " out of 18, driven by high urgency and critical factors such as medical needs or vulnerable populations."
-    );
+      let urgencyText = "";
+      let needContext = "";
+      
+      if (urgency === "HIGH") {
+          urgencyText = "driven by high urgency and critical factors";
+          if (primaryNeed === "medical") {
+              needContext = " such as medical needs or vulnerable populations";
+          } else if (primaryNeed === "rescue") {
+              needContext = " such as trapped individuals or immediate danger";
+          } else {
+              needContext = " such as urgent assistance needs";
+          }
+      } else if (urgency === "MEDIUM") {
+          urgencyText = "driven by moderate urgency and situational needs";
+          needContext = "";
+      } else {
+          urgencyText = "driven by lower urgency and general assistance needs";
+          needContext = "";
+      }
+      
+      reasons.push(
+        "This request received a priority score of " + safeScore + " based on urgency, scale, and need, " + urgencyText + needContext + "."
+      );
   } else if (safeScore >= 6) {
-    reasons.push(
-      "This request scored " +
-        safeScore +
-        " out of 18, reflecting moderate urgency that places it ahead of lower-priority requests."
-    );
+      reasons.push(
+        "This request received a priority score of " + safeScore + " based on urgency, scale, and need, reflecting moderate urgency that places it ahead of lower-priority requests."
+      );
   } else {
-    reasons.push(
-      "This request scored " +
-        safeScore +
-        " out of 18, indicating a baseline priority with minimal urgency indicators."
-    );
+      reasons.push(
+        "This request received a priority score of " + safeScore + " based on urgency, scale, and need, indicating a baseline priority with minimal urgency indicators."
+      );
   }
 
-  const urgency = typeof r.urgency === "string" && r.urgency !== "" ? r.urgency : null;
   if (urgency) {
     reasons.push(
       "The request urgency level is set to " +

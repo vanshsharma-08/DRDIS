@@ -134,46 +134,32 @@ function calculateConfidence(text) {
   const normalized = text.toLowerCase();
   let confidence = 0.5; // Base confidence
 
-  // High-confidence keywords
-  const highConfidenceKeywords = [
-    'critical', 'urgent', 'emergency', 'trapped', 'fire', 'flood',
-    'medical', 'doctor', 'hospital', 'ambulance', 'injured', 'bleeding',
-    'food', 'water', 'rescue', 'evacuate'
+  // Strict keywords for high confidence
+  const strictKeywords = [
+    'trapped', 'collapse', 'flood', 'earthquake', // Rescue
+    'injured', 'bleeding', 'critical', 'hospital', // Medical
+    'food', 'hunger', 'starving', 'water' // Food
   ];
 
-  // Medium-confidence keywords
-  const mediumConfidenceKeywords = [
-    'people', 'persons', 'survivors', 'victims', 'families',
-    'children', 'elderly', 'pregnant', 'baby', 'infant',
-    'at', 'in', 'near', 'from', 'around'
-  ];
-
-  // Check for high-confidence keywords
-  for (const keyword of highConfidenceKeywords) {
+  let matchedKeyword = false;
+  for (const keyword of strictKeywords) {
     if (normalized.includes(keyword)) {
-      confidence += 0.05;
-    }
-  }
-
-  // Check for medium-confidence keywords
-  for (const keyword of mediumConfidenceKeywords) {
-    if (normalized.includes(keyword)) {
-      confidence += 0.02;
+      matchedKeyword = true;
+      break;
     }
   }
 
   // Check for number patterns (people count)
-  if (/\d+\s*(?:people|persons?|survivors?|victims?)/i.test(text)) {
-    confidence += 0.1;
+  const hasNumber = /\d+/.test(text);
+
+  // Set confidence LOW if no keyword matched OR no people count
+  if (!matchedKeyword || !hasNumber) {
+    confidence = 0.3;
+  } else {
+    confidence = 0.8; // High confidence if both keyword and number present
   }
 
-  // Check for location patterns
-  if (/(?:at|in|near|from|around)\s+[a-z]{3,}/i.test(text)) {
-    confidence += 0.05;
-  }
-
-  // Cap at 1.0
-  return Math.min(confidence, 1.0);
+  return confidence;
 }
 
 // ─── Input Trimming ────────────────────────────────────────────────────────────
@@ -324,14 +310,14 @@ async function parseWithGemini(text, req = null) {
     // Validate input
     if (!text || typeof text !== 'string') {
       metrics.fallbackUsage++;
-      return ruleBasedParse(text);
+      return { parsedData: ruleBasedParse(text), source: "rule" };
     }
 
     // Check input length (reject if exceeded)
     if (text.length > MAX_INPUT_LENGTH) {
       console.warn(`[Gemini Integration] Input too long: ${text.length} chars`);
       metrics.fallbackUsage++;
-      return ruleBasedParse(text.substring(0, MAX_INPUT_LENGTH));
+      return { parsedData: ruleBasedParse(text.substring(0, MAX_INPUT_LENGTH)), source: "rule" };
     }
 
     // Rate limiting check
@@ -340,7 +326,7 @@ async function parseWithGemini(text, req = null) {
       console.warn(`[Gemini Integration] Rate limit exceeded for IP: ${ip}`);
       metrics.rateLimitTriggers++;
       metrics.fallbackUsage++;
-      return ruleBasedParse(text);
+      return { parsedData: ruleBasedParse(text), source: "rule" };
     }
 
     // Trim input
@@ -356,12 +342,14 @@ async function parseWithGemini(text, req = null) {
 
     // Calculate confidence
     const confidence = calculateConfidence(trimmedText);
+    console.log("confidence:", confidence);
 
     // Rule-based parsing (primary)
     const ruleBasedResult = ruleBasedParse(trimmedText);
 
     // Only call Gemini if confidence is low
     if (confidence < CONFIDENCE_THRESHOLD) {
+      console.log("source:", "gemini");
       try {
         // Track Gemini call
         metrics.geminiCalls++;
@@ -376,9 +364,14 @@ async function parseWithGemini(text, req = null) {
 
         // Validate response before using
         if (geminiResult && validateResponse(geminiResult)) {
+          // Gemini people_count normalization: if people_count <= 1 AND original text has no explicit number
+          const hasNumber = /\d+/.test(text);
+          if (!hasNumber && geminiResult.people_count <= 1) {
+            geminiResult.people_count = 0;
+          }
           // Gemini succeeded - use its result
-          setCachedResult(cacheKey, geminiResult);
-          return geminiResult;
+          setCachedResult(cacheKey, { parsedData: geminiResult, source: "gemini" });
+          return { parsedData: geminiResult, source: "gemini" };
         }
         // If Gemini fails or returns invalid response, fall through to rule-based result
         metrics.fallbackUsage++;
@@ -393,13 +386,14 @@ async function parseWithGemini(text, req = null) {
     }
 
     // Use rule-based result (either confidence was high, or Gemini failed)
-    setCachedResult(cacheKey, ruleBasedResult);
-    return ruleBasedResult;
+    const ruleResult = { parsedData: ruleBasedResult, source: "rule" };
+    setCachedResult(cacheKey, ruleResult);
+    return ruleResult;
   } catch (error) {
     // Global error handler - never crash
     handleError(error, 'parseWithGemini');
     metrics.fallbackUsage++;
-    return ruleBasedParse(text || '');
+    return { parsedData: ruleBasedParse(text || ''), source: "rule" };
   }
 }
 
