@@ -1,14 +1,12 @@
 import React from 'react';
 
 function OutputPanel({ results, loading, error }) {
-  console.log("RESULT SOURCE:", results?.source);
-  
   if (loading) {
     return (
-      <div style={styles.loadingCard}>
+      <div style={styles.loadingContainer}>
         <div style={styles.loadingSpinner}></div>
-        <h2>Analyzing...</h2>
-        <p>Evaluating requests...</p>
+        <h2 style={styles.loadingTitle}>Analyzing Emergency Requests...</h2>
+        <p style={styles.loadingSubtitle}>Evaluating priorities and matching resources</p>
       </div>
     );
   }
@@ -16,147 +14,262 @@ function OutputPanel({ results, loading, error }) {
   if (error) {
     return (
       <div style={styles.errorContainer}>
-        <span style={styles.errorIcon}>⚠️</span>
-        <span style={styles.errorText}>{error}</span>
+        <div style={styles.errorIcon}>⚠️</div>
+        <div style={styles.errorContent}>
+          <h3 style={styles.errorTitle}>Connection Error</h3>
+          <p style={styles.errorText}>{error}</p>
+        </div>
       </div>
     );
   }
 
   if (!results) {
     return (
-      <div style={styles.emptyCard}>
-        <h2>🚨 FINAL DECISION</h2>
-        <p>Enter requests and click Analyze.</p>
+      <div style={styles.emptyContainer}>
+        <div style={styles.emptyIcon}>🚨</div>
+        <h2 style={styles.emptyTitle}>Final Decision Dashboard</h2>
+        <p style={styles.emptySubtitle}>Enter disaster requests and click Analyze to see results</p>
       </div>
     );
   }
 
-  const { selected_request, assigned_volunteer, decision_score, other_requests, source } = results;
+  const { selected_request, assigned_volunteer, decision_score, other_requests, source, reasons } = results;
   const data = selected_request || {};
   const team = assigned_volunteer || {};
-
-  // Fix source mapping
-  const sourceValue = (source || "").trim().toLowerCase();
   
+  // Calculate progress bar percentage (max score assumed to be 200)
+  const maxScore = 200;
+  const progressPercentage = Math.min((decision_score / maxScore) * 100, 100);
+
+  // Handle reasons array or fallback to data.reasons
+  const reasonsList = reasons || data.reasons || [];
+
+  // Get source display config
   const getSourceDisplay = (src) => {
     if (src === 'gemini') {
-      return { label: 'AI (Gemini)', color: '#7c3aed' };
+      return { 
+        label: '🤖 AI Fallback (Vague Input)', 
+        bgColor: '#f3e8ff',
+        textColor: '#6b21a8',
+        borderColor: '#e9d5ff'
+      };
     }
     if (src === 'rule') {
-      return { label: 'Rule-Based', color: '#059669' };
+      return { 
+        label: '⚡ Rule Engine Assessed', 
+        bgColor: '#d1fae5',
+        textColor: '#065f46',
+        borderColor: '#a7f3d0'
+      };
     }
-    return { label: 'Unknown', color: '#6b7280' };
+    return { 
+      label: 'Unknown Source', 
+      bgColor: '#f3f4f6',
+      textColor: '#4b5563',
+      borderColor: '#e5e7eb'
+    };
   };
-  
-  const src = getSourceDisplay(sourceValue);
 
+  const sourceConfig = getSourceDisplay(source);
+
+  // Get urgency config
   const getUrgencyConfig = (urgency) => {
     switch (urgency) {
-      case 'HIGH': return { color: '#dc2626', label: 'HIGH PRIORITY', icon: '🔴' };
-      case 'MEDIUM': return { color: '#ea580c', label: 'MEDIUM PRIORITY', icon: '🟠' };
-      case 'LOW': return { color: '#16a34a', label: 'LOW PRIORITY', icon: '🟢' };
-      default: return { color: '#6b7280', label: 'UNKNOWN', icon: '⚪' };
+      case 'HIGH': return { 
+        color: '#dc2626', 
+        bgColor: '#fef2f2',
+        label: 'HIGH PRIORITY', 
+        icon: '🔴' 
+      };
+      case 'MEDIUM': return { 
+        color: '#d97706', 
+        bgColor: '#fffbeb',
+        label: 'MEDIUM PRIORITY', 
+        icon: '🟠' 
+      };
+      case 'LOW': return { 
+        color: '#059669', 
+        bgColor: '#ecfdf5',
+        label: 'LOW PRIORITY', 
+        icon: '🟢' 
+      };
+      default: return { 
+        color: '#6b7280', 
+        bgColor: '#f9fafb',
+        label: 'UNKNOWN', 
+        icon: '⚪' 
+      };
     }
   };
 
   const urgencyConfig = getUrgencyConfig(data.urgency);
 
+  // Get reason icons
+  const getReasonIcon = (reasonText) => {
+    const lower = reasonText.toLowerCase();
+    if (lower.includes('score') || lower.includes('priority')) return '📊';
+    if (lower.includes('urgency') || lower.includes('critical')) return '🚨';
+    if (lower.includes('team') || lower.includes('assigned')) return '👨‍🚒';
+    if (lower.includes('people') || lower.includes('affected')) return '👥';
+    if (lower.includes('need') || lower.includes('require')) return '📦';
+    return '✓';
+  };
+
   return (
     <div style={styles.dashboard}>
-      {/* Hero Decision Block */}
-      <div style={styles.heroCard}>
-        <div style={styles.heroHeader}>
-          <h2 style={styles.heroTitle}>🚨 FINAL DECISION</h2>
-          <div style={styles.sourceBadge}>
-            <span style={{
-              backgroundColor: src.color,
-              color: 'white',
-              padding: '4px 12px',
-              borderRadius: '12px',
-              fontSize: '0.75rem',
-              fontWeight: 600
-            }}>
-              ● {src.label}
-            </span>
+      {/* Selected Emergency Callout */}
+      <div style={styles.selectedEmergencyCard}>
+        <div style={styles.selectedHeader}>
+          <span style={styles.selectedLabel}>Selected Emergency</span>
+          <span style={{
+            ...styles.selectedSource,
+            backgroundColor: sourceConfig.bgColor,
+            color: sourceConfig.textColor,
+            borderColor: sourceConfig.borderColor
+          }}>
+            {sourceConfig.label}
+          </span>
+        </div>
+        <div style={styles.selectedContent}>
+          <p 
+            style={styles.selectedText}
+            title={data.text || 'No text available'}
+          >
+            {data.text || 'No emergency selected'}
+          </p>
+        </div>
+      </div>
+
+      {/* Main Decision Card */}
+      <div style={styles.decisionCard}>
+        <div style={styles.decisionHeader}>
+          <h2 style={styles.decisionTitle}>Final Decision</h2>
+        </div>
+
+        {/* Score and Progress Bar Group */}
+        <div style={styles.scoreGaugeContainer}>
+          <div style={styles.scoreGaugeHeader}>
+            <span style={styles.scoreLabel}>Decision Score</span>
+          </div>
+          <div style={styles.scoreGaugeValueContainer}>
+            <span style={styles.scoreValue}>{decision_score?.toFixed(2) || '0.00'}</span>
+          </div>
+          <div style={styles.progressBarContainer}>
+            <div style={{
+              ...styles.progressBarFill,
+              width: `${progressPercentage}%`
+            }}></div>
+          </div>
+          <div style={styles.scoreMicroCopy}>
+            Proprietary Severity Index (Max: 200)
           </div>
         </div>
 
-        <div style={styles.heroContent}>
-          {/* Urgency - Very Large */}
-          <div style={styles.urgencyBlock}>
-            <span style={styles.urgencyIcon}>{urgencyConfig.icon}</span>
-            <span style={{ ...styles.urgencyText, color: urgencyConfig.color }}>
-              {urgencyConfig.label}
-            </span>
-          </div>
+        {/* Urgency Display */}
+        <div style={{
+          ...styles.urgencyBlock,
+          backgroundColor: urgencyConfig.bgColor
+        }}>
+          <span style={styles.urgencyIcon}>{urgencyConfig.icon}</span>
+          <span style={{
+            ...styles.urgencyText,
+            color: urgencyConfig.color
+          }}>
+            {urgencyConfig.label}
+          </span>
+        </div>
 
-          {/* Key Info Grid */}
-          <div style={styles.infoGrid}>
-            <div style={styles.infoItem}>
+        {/* Key Info Grid */}
+        <div style={styles.infoGrid}>
+          <div style={styles.infoItem}>
+            <div style={styles.infoIconWrapper}>
               <span style={styles.infoIcon}>👥</span>
-              <span style={styles.infoText}>
-                {data.people_count > 0 ? `${data.people_count} People` : 'Unknown'}
+            </div>
+            <div style={styles.infoContent}>
+              <span style={styles.infoLabel}>People Affected</span>
+              <span style={styles.infoValue}>
+                {data.people_count > 0 ? data.people_count : 'Unknown'}
               </span>
             </div>
-            <div style={styles.infoItem}>
+          </div>
+
+          <div style={styles.infoItem}>
+            <div style={styles.infoIconWrapper}>
               <span style={styles.infoIcon}>📦</span>
-              <span style={styles.infoText}>
+            </div>
+            <div style={styles.infoContent}>
+              <span style={styles.infoLabel}>Critical Need</span>
+              <span style={styles.infoValue}>
                 {data.needs?.[0] ? data.needs[0].toUpperCase() : 'UNKNOWN'}
               </span>
             </div>
-            <div style={styles.infoItem}>
+          </div>
+
+          <div style={styles.infoItem}>
+            <div style={styles.infoIconWrapper}>
               <span style={styles.infoIcon}>👨‍🚒</span>
-              <span style={styles.infoText}>
-                {team.name || 'Unknown Team'}
+            </div>
+            <div style={styles.infoContent}>
+              <span style={styles.infoLabel}>Assigned Team</span>
+              <span style={styles.infoValue}>
+                {team.name || 'Emergency Response Team'}
               </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Why Section */}
-      <div style={styles.whyCard}>
-        <h3 style={styles.sectionTitle}>Why This Was Selected</h3>
-        <ul style={styles.bulletList}>
-          {data.urgency === 'HIGH' && (
-            <li style={styles.bulletItem}>
-              <span style={styles.check}>✔</span> Highest urgency detected
-            </li>
+      {/* Decision Logic Chain */}
+      <div style={styles.logicChainCard}>
+        <h3 style={styles.sectionTitle}>Decision Logic Chain</h3>
+        <div style={styles.logicChain}>
+          {reasonsList && reasonsList.length > 0 ? (
+            reasonsList.map((reason, idx) => (
+              <div key={idx} style={styles.logicItem}>
+                <div style={styles.logicIconWrapper}>
+                  <span style={styles.logicIcon}>{getReasonIcon(reason)}</span>
+                </div>
+                <div style={styles.logicContent}>
+                  <span style={styles.logicText}>{reason}</span>
+                </div>
+                {idx < reasonsList.length - 1 && <div style={styles.logicConnector} />}
+              </div>
+            ))
+          ) : (
+            <div style={styles.fallbackReasons}>
+              <div style={styles.logicItem}>
+                <div style={styles.logicIconWrapper}>
+                  <span style={styles.logicIcon}>✓</span>
+                </div>
+                <div style={styles.logicContent}>
+                  <span style={styles.logicText}>Standard triage protocols applied.</span>
+                </div>
+              </div>
+            </div>
           )}
-          {data.people_count > 0 && (
-            <li style={styles.bulletItem}>
-              <span style={styles.check}>✔</span> {data.people_count} people affected
-            </li>
-          )}
-          {data.needs?.[0] && (
-            <li style={styles.bulletItem}>
-              <span style={styles.check}>✔</span> Critical need: {data.needs[0]}
-            </li>
-          )}
-          {data.severity_reason && (
-            <li style={styles.bulletItem}>
-              <span style={styles.check}>✔</span> {data.severity_reason}
-            </li>
-          )}
-        </ul>
+        </div>
       </div>
 
-      {/* Comparison Section */}
+      {/* Other Requests Comparison */}
       {other_requests?.length > 0 && (
         <div style={styles.comparisonCard}>
-          <h3 style={styles.sectionTitle}>Other Requests</h3>
+          <h3 style={styles.sectionTitle}>Other Requests Considered</h3>
           <div style={styles.comparisonList}>
             {other_requests.map((req, idx) => (
               <div key={idx} style={styles.comparisonItem}>
-                <div style={styles.compRow}>
-                  <span style={styles.compType}>
-                    {req.needs?.[0] || 'Request'}
+                <div style={styles.comparisonHeader}>
+                  <span style={styles.comparisonType}>
+                    {req.needs?.[0] || 'Request'} #{idx + 1}
                   </span>
-                  <span style={styles.compUrgency}>
+                  <span style={{
+                    ...styles.comparisonUrgency,
+                    color: req.urgency === 'HIGH' ? '#dc2626' : 
+                           req.urgency === 'MEDIUM' ? '#d97706' : '#059669'
+                  }}>
                     {req.urgency || 'Unknown'}
                   </span>
                 </div>
-                <div style={styles.compReason}>
+                <div style={styles.comparisonReason}>
                   {req.reason || 'Not selected'}
                 </div>
               </div>
@@ -172,235 +285,387 @@ const styles = {
   dashboard: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '20px',
+    gap: '24px',
+    fontFamily: 'system-ui, -apple-system, sans-serif',
   },
-  
-  // Hero Card
-  heroCard: {
+
+  // Selected Emergency Card
+  selectedEmergencyCard: {
     background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
     borderRadius: '16px',
     padding: '24px',
-    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
     border: '1px solid #e2e8f0',
   },
-  
-  heroHeader: {
+  selectedHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '16px',
+  },
+  selectedLabel: {
+    fontSize: '12px',
+    fontWeight: '600',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+  },
+  selectedSource: {
+    fontSize: '11px',
+    fontWeight: '600',
+    padding: '4px 10px',
+    borderRadius: '12px',
+    border: '1px solid',
+  },
+  selectedContent: {
+    display: 'flex',
+    alignItems: 'flex-start',
+  },
+  selectedText: {
+    fontSize: '18px',
+    fontWeight: '500',
+    color: '#1e293b',
+    lineHeight: '1.4',
+    margin: 0,
+    flex: 1,
+    display: '-webkit-box',
+    WebkitLineClamp: 3,
+    WebkitBoxOrient: 'vertical',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  },
+
+  // Decision Card
+  decisionCard: {
+    background: '#ffffff',
+    borderRadius: '16px',
+    padding: '24px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    border: '1px solid #e2e8f0',
+  },
+  decisionHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: '20px',
   },
-  
-  heroTitle: {
+  decisionTitle: {
+    fontSize: '20px',
+    fontWeight: '700',
+    color: '#1e293b',
     margin: 0,
-    fontSize: '24px',
-    fontWeight: '800',
-    color: '#1a1a2e',
   },
-  
-  sourceBadge: {
-    display: 'flex',
-    alignItems: 'center',
-  },
-  
-  aiBadge: {
-    background: '#fef3c7',
-    color: '#92400e',
-    padding: '6px 12px',
-    borderRadius: '20px',
-    fontSize: '13px',
-    fontWeight: '700',
-  },
-  
-  ruleBadge: {
-    background: '#d1fae5',
-    color: '#065f46',
-    padding: '6px 12px',
-    borderRadius: '20px',
-    fontSize: '13px',
-    fontWeight: '700',
-  },
-
-  heroContent: {
+  scoreBadge: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '20px',
+    alignItems: 'flex-end',
+    gap: '2px',
   },
-  
+  scoreLabel: {
+    fontSize: '10px',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+  },
+  scoreValue: {
+    fontSize: '18px',
+    fontWeight: '700',
+    color: '#1e293b',
+  },
+  progressBarContainer: {
+    height: '6px',
+    background: '#e2e8f0',
+    borderRadius: '3px',
+    overflow: 'hidden',
+    marginBottom: '8px',
+  },
+  progressBarFill: {
+    height: '100%',
+    background: 'linear-gradient(90deg, #3b82f6, #2563eb)',
+    borderRadius: '3px',
+    transition: 'width 0.5s ease',
+  },
+  scoreGaugeContainer: {
+    marginBottom: '20px',
+  },
+  scoreGaugeHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '4px',
+  },
+  scoreGaugeValueContainer: {
+    textAlign: 'center',
+    marginBottom: '8px',
+  },
+  scoreMicroCopy: {
+    fontSize: '11px',
+    color: '#64748b',
+    textAlign: 'center',
+    marginTop: '8px',
+    letterSpacing: '0.3px',
+  },
   urgencyBlock: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     gap: '12px',
     padding: '16px',
-    background: '#f8fafc',
     borderRadius: '12px',
+    marginBottom: '20px',
   },
-  
   urgencyIcon: {
-    fontSize: '28px',
+    fontSize: '24px',
   },
-  
   urgencyText: {
-    fontSize: '28px',
-    fontWeight: '900',
+    fontSize: '20px',
+    fontWeight: '800',
     textTransform: 'uppercase',
+    letterSpacing: '1px',
   },
-  
   infoGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '12px',
+    gap: '16px',
   },
-  
   infoItem: {
     display: 'flex',
-    flexDirection: 'column',
     alignItems: 'center',
-    gap: '6px',
+    gap: '12px',
     padding: '12px',
     background: '#f8fafc',
     borderRadius: '10px',
   },
-  
-  infoIcon: {
-    fontSize: '24px',
-  },
-  
-  infoText: {
-    fontSize: '16px',
-    fontWeight: '700',
-    color: '#1a1a2e',
-    textAlign: 'center',
-  },
-
-  // Why Card
-  whyCard: {
+  infoIconWrapper: {
+    width: '36px',
+    height: '36px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     background: '#ffffff',
-    borderRadius: '16px',
-    padding: '20px',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+    borderRadius: '8px',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
   },
-  
-  sectionTitle: {
-    margin: '0 0 12px 0',
-    fontSize: '16px',
-    fontWeight: '700',
-    color: '#1a1a2e',
+  infoIcon: {
+    fontSize: '18px',
   },
-  
-  bulletList: {
-    margin: 0,
-    paddingLeft: '18px',
+  infoContent: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px',
+    gap: '2px',
   },
-  
-  bulletItem: {
+  infoLabel: {
+    fontSize: '11px',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    letterSpacing: '0.3px',
+  },
+  infoValue: {
     fontSize: '14px',
-    color: '#4b5563',
+    fontWeight: '600',
+    color: '#1e293b',
   },
-  
-  check: {
-    color: '#2563eb',
-    fontWeight: 'bold',
-    marginRight: '8px',
+
+  // Decision Logic Chain
+  logicChainCard: {
+    background: '#ffffff',
+    borderRadius: '16px',
+    padding: '24px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    border: '1px solid #e2e8f0',
+  },
+  sectionTitle: {
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#475569',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    marginBottom: '16px',
+  },
+  logicChain: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0',
+  },
+  logicItem: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '12px',
+    padding: '12px',
+    background: '#f8fafc',
+    borderRadius: '8px',
+    position: 'relative',
+  },
+  logicIconWrapper: {
+    width: '32px',
+    height: '32px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: '#ffffff',
+    borderRadius: '6px',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+    flexShrink: 0,
+  },
+  logicIcon: {
+    fontSize: '14px',
+  },
+  logicContent: {
+    flex: 1,
+    paddingTop: '2px',
+  },
+  logicText: {
+    fontSize: '13px',
+    color: '#1e293b',
+    lineHeight: '1.4',
+    fontWeight: '500',
+    wordBreak: 'break-word',
+    whiteSpace: 'normal',
+    overflowWrap: 'anywhere',
+  },
+  logicConnector: {
+    position: 'absolute',
+    left: '27px',
+    top: '44px',
+    bottom: '-8px',
+    width: '2px',
+    background: '#e2e8f0',
+  },
+  fallbackReasons: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0',
   },
 
   // Comparison Card
   comparisonCard: {
     background: '#ffffff',
     borderRadius: '16px',
-    padding: '20px',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+    padding: '24px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    border: '1px solid #e2e8f0',
   },
-  
   comparisonList: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '10px',
+    gap: '12px',
   },
-  
   comparisonItem: {
-    padding: '12px',
+    padding: '14px',
     background: '#f8fafc',
-    borderRadius: '8px',
-    borderLeft: '3px solid #e2e8f0',
+    borderRadius: '10px',
+    borderLeft: '3px solid #cbd5e1',
   },
-  
-  compRow: {
+  comparisonHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '4px',
+    marginBottom: '6px',
   },
-  
-  compType: {
+  comparisonType: {
     fontSize: '13px',
     fontWeight: '600',
-    color: '#374151',
-    textTransform: 'capitalize',
+    color: '#475569',
   },
-  
-  compUrgency: {
+  comparisonUrgency: {
     fontSize: '11px',
     fontWeight: '600',
-    color: '#6b7280',
     textTransform: 'uppercase',
+    letterSpacing: '0.3px',
   },
-  
-  compReason: {
+  comparisonReason: {
     fontSize: '12px',
-    color: '#6b7280',
+    color: '#64748b',
   },
 
-  // Loading & Empty
-  loadingCard: {
+  // Loading State
+  loadingContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '60px 24px',
     background: '#ffffff',
     borderRadius: '16px',
-    padding: '40px 24px',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-    textAlign: 'center',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    border: '1px solid #e2e8f0',
   },
-  
-  emptyCard: {
-    background: '#ffffff',
-    borderRadius: '16px',
-    padding: '40px 24px',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-    textAlign: 'center',
+  loadingSpinner: {
+    width: '48px',
+    height: '48px',
+    border: '3px solid #e2e8f0',
+    borderTop: '3px solid #3b82f6',
+    borderRadius: '50%',
+    animation: 'spin 1s linear infinite',
+    marginBottom: '20px',
   },
-  
-  // Inline Error
+  loadingTitle: {
+    fontSize: '18px',
+    fontWeight: '600',
+    color: '#1e293b',
+    margin: '0 0 8px 0',
+  },
+  loadingSubtitle: {
+    fontSize: '14px',
+    color: '#64748b',
+    margin: 0,
+  },
+
+  // Error State
   errorContainer: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
-    padding: '12px 16px',
+    gap: '16px',
+    padding: '20px',
     background: '#fef2f2',
+    borderRadius: '12px',
     border: '1px solid #fecaca',
-    borderRadius: '8px',
-    fontSize: '14px',
   },
-  
   errorIcon: {
-    fontSize: '16px',
+    fontSize: '24px',
   },
-  
-  errorText: {
+  errorContent: {
+    flex: 1,
+  },
+  errorTitle: {
+    fontSize: '14px',
+    fontWeight: '600',
     color: '#991b1b',
+    margin: '0 0 4px 0',
+  },
+  errorText: {
+    fontSize: '13px',
+    color: '#b91c1c',
+    margin: 0,
   },
 
-  // Loading Spinner
-  loadingSpinner: {
-    width: '40px',
-    height: '40px',
-    border: '3px solid #e5e7eb',
-    borderTop: '3px solid #2563eb',
-    borderRadius: '50%',
-    margin: '0 auto 16px',
-    animation: 'spin 1s linear infinite',
+  // Empty State
+  emptyContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '60px 24px',
+    background: '#ffffff',
+    borderRadius: '16px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    border: '1px solid #e2e8f0',
+  },
+  emptyIcon: {
+    fontSize: '48px',
+    marginBottom: '16px',
+  },
+  emptyTitle: {
+    fontSize: '18px',
+    fontWeight: '600',
+    color: '#1e293b',
+    margin: '0 0 8px 0',
+  },
+  emptySubtitle: {
+    fontSize: '14px',
+    color: '#64748b',
+    margin: 0,
+    textAlign: 'center',
   },
 };
 

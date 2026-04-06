@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import InputPanel, { DEFAULT_REQUESTS } from "./components/InputPanel";
 import OutputPanel from "./components/OutputPanel";
 
-const API_URL = "http://localhost:3001/api/analyze";
+const API_URL = "http://localhost:3001/analyze";
 
 const MEANINGFUL_KEYWORDS = [
   "people", "person", "injured", "trapped", "need", "help", "rescue", "medical",
@@ -77,6 +77,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [validCount, setValidCount] = useState(null);
+  const [winningIndex, setWinningIndex] = useState(null);
 
   function handleChange(index, value) {
     setRequests((prev) => {
@@ -136,10 +137,48 @@ function App() {
         throw new Error(data.error || `Server error: ${response.status}`);
       }
 
-      setResults({ ...data, _validCount: validRequests.length });
+      // Store the original requests array for mapping
+      const originalRequests = formattedRequests.map(r => r.text);
       
-      console.log("STATE RESULT:", { ...data, _validCount: validRequests.length });
+      // Find winning index by matching selected request text
+      const selectedText = data.selected_request?.text;
+      let winIdx = null;
+      
+      if (selectedText) {
+        // Exact match first
+        winIdx = originalRequests.findIndex(req => req.trim() === selectedText.trim());
+        
+        // Fuzzy match if exact match fails
+        if (winIdx === -1) {
+          winIdx = originalRequests.findIndex(req => 
+            req.trim().includes(selectedText.trim()) || 
+            selectedText.trim().includes(req.trim())
+          );
+        }
+      }
+      
+      // Only set winning index if we found a match
+      if (winIdx === -1) {
+        winIdx = null;
+      }
+      
+      // Ensure selected_request has the correct text
+      const enhancedData = {
+        ...data,
+        selected_request: {
+          ...data.selected_request,
+          text: selectedText || (winIdx !== null ? originalRequests[winIdx] : 'No emergency selected')
+        },
+        _validCount: validRequests.length
+      };
+      
+      setResults(enhancedData);
+      setWinningIndex(winIdx);
+      
+      console.log("STATE RESULT:", enhancedData);
       console.log("STATE SOURCE:", data.source);
+      console.log("WINNING INDEX:", winIdx);
+      console.log("SELECTED TEXT:", enhancedData.selected_request.text);
     } catch (err) {
       console.error("[DRDIS] Error:", err.message);
       setError(err.message || "Failed to connect to the server. Please try again.");
@@ -170,6 +209,7 @@ function App() {
               onChange={handleChange}
               onAnalyze={handleAnalyze}
               loading={loading}
+              winningIndex={winningIndex}
             />
           </div>
           <div style={styles.outputPanel}>
@@ -199,8 +239,8 @@ const spinnerKeyframes = `
 const styles = {
   page: {
     minHeight: "100vh",
-    background: "#f0f4f8",
-    fontFamily: "'Segoe UI', Arial, sans-serif",
+    background: "#f8fafc",
+    fontFamily: "system-ui, -apple-system, sans-serif",
     display: "flex",
     flexDirection: "column",
   },
@@ -240,6 +280,7 @@ const styles = {
     width: "100%",
     margin: "0 auto",
     boxSizing: "border-box",
+    background: "#f8fafc",
   },
   container: {
     display: "flex",
