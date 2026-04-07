@@ -71,6 +71,40 @@ function validateAndSplitRequests(rawRequests) {
   return { validRequests, warnings };
 }
 
+// Robust utility function to find winning index with fuzzy matching
+function getWinningIndex(requests, selectedText) {
+  if (!selectedText || !requests || requests.length === 0) {
+    return null;
+  }
+
+  const normalizedSelected = selectedText.trim().toLowerCase();
+  
+  // Try exact match first (case-insensitive)
+  let exactIndex = requests.findIndex(req => 
+    req.trim().toLowerCase() === normalizedSelected
+  );
+  
+  if (exactIndex !== -1) {
+    return exactIndex;
+  }
+  
+  // Try fuzzy match: check if selected text contains or is contained by request
+  let fuzzyIndex = requests.findIndex(req => {
+    const normalizedReq = req.trim().toLowerCase();
+    return (
+      normalizedReq.includes(normalizedSelected) || 
+      normalizedSelected.includes(normalizedReq)
+    );
+  });
+  
+  if (fuzzyIndex !== -1) {
+    return fuzzyIndex;
+  }
+  
+  // No match found
+  return null;
+}
+
 function App() {
   const [requests, setRequests] = useState([...DEFAULT_REQUESTS]);
   const [results, setResults] = useState(null);
@@ -103,6 +137,9 @@ function App() {
     setError(null);
     setResults(null);
     setValidCount(validRequests.length);
+    
+    // Reset winning index immediately to clear previous highlights
+    setWinningIndex(null);
 
     const formattedRequests = requests
       .filter(r => r && r.trim() !== '')
@@ -140,27 +177,9 @@ function App() {
       // Store the original requests array for mapping
       const originalRequests = formattedRequests.map(r => r.text);
       
-      // Find winning index by matching selected request text
+      // Find winning index using the robust utility function
       const selectedText = data.selected_request?.text;
-      let winIdx = null;
-      
-      if (selectedText) {
-        // Exact match first
-        winIdx = originalRequests.findIndex(req => req.trim() === selectedText.trim());
-        
-        // Fuzzy match if exact match fails
-        if (winIdx === -1) {
-          winIdx = originalRequests.findIndex(req => 
-            req.trim().includes(selectedText.trim()) || 
-            selectedText.trim().includes(req.trim())
-          );
-        }
-      }
-      
-      // Only set winning index if we found a match
-      if (winIdx === -1) {
-        winIdx = null;
-      }
+      const winIdx = getWinningIndex(originalRequests, selectedText);
       
       // Ensure selected_request has the correct text
       const enhancedData = {
