@@ -38,9 +38,9 @@ async function runTests() {
   {
     const result = await parseWithGemini("Critical medical emergency at hospital, 5 people injured");
     console.log("  breakdown:", result);
-    assert("urgency", result.urgency, "HIGH");
-    assert("has medical", result.has_medical, true);
-    assert("people count", result.people_count, 5);
+    assert("urgency", result.parsedData.urgency, "HIGH");
+    assert("has medical", result.parsedData.has_medical, true);
+    assert("people count", result.parsedData.people_count, 5);
   }
 
   // Test 2: Low confidence input (should call Gemini)
@@ -49,8 +49,8 @@ async function runTests() {
     const result = await parseWithGemini("Need help with something");
     console.log("  breakdown:", result);
     // Should still return valid result (either from Gemini or fallback)
-    assert("has urgency", result.urgency !== undefined, true);
-    assert("has needs", Array.isArray(result.needs), true);
+    assert("has urgency", result.parsedData.urgency !== undefined, true);
+    assert("has needs", Array.isArray(result.parsedData.needs), true);
   }
 
   // Test 3: Cached input (should return cached result)
@@ -72,8 +72,8 @@ async function runTests() {
       "This should be trimmed to 150 characters maximum.";
     const result = await parseWithGemini(longText);
     console.log("  result:", result);
-    assert("has urgency", result.urgency !== undefined, true);
-    assert("has needs", Array.isArray(result.needs), true);
+    assert("has urgency", result.parsedData.urgency !== undefined, true);
+    assert("has needs", Array.isArray(result.parsedData.needs), true);
   }
 
   // Test 5: Null input (should use fallback)
@@ -81,8 +81,8 @@ async function runTests() {
   {
     const result = await parseWithGemini(null);
     console.log("  result:", result);
-    assert("has urgency", result.urgency !== undefined, true);
-    assert("has needs", Array.isArray(result.needs), true);
+    assert("has urgency", result.parsedData.urgency !== undefined, true);
+    assert("has needs", Array.isArray(result.parsedData.needs), true);
   }
 
   // Test 6: Empty string (should use fallback)
@@ -90,8 +90,8 @@ async function runTests() {
   {
     const result = await parseWithGemini("");
     console.log("  result:", result);
-    assert("has urgency", result.urgency !== undefined, true);
-    assert("has needs", Array.isArray(result.needs), true);
+    assert("has urgency", result.parsedData.urgency !== undefined, true);
+    assert("has needs", Array.isArray(result.parsedData.needs), true);
   }
 
   // Test 7: Confidence calculation
@@ -108,7 +108,7 @@ async function runTests() {
     console.log("  high confidence result:", result1);
     console.log("  low confidence result:", result2);
     assert("both return valid results", 
-      result1.urgency !== undefined && result2.urgency !== undefined, 
+      result1.parsedData.urgency !== undefined && result2.parsedData.urgency !== undefined, 
       true);
   }
 
@@ -118,8 +118,8 @@ async function runTests() {
     const longText = "a".repeat(350); // 350 chars, exceeds 300 limit
     const result = await parseWithGemini(longText);
     console.log("  result:", result);
-    assert("has urgency", result.urgency !== undefined, true);
-    assert("has needs", Array.isArray(result.needs), true);
+    assert("has urgency", result.parsedData.urgency !== undefined, true);
+    assert("has needs", Array.isArray(result.parsedData.needs), true);
   }
 
   // Test 9: Rate limiting
@@ -136,7 +136,7 @@ async function runTests() {
     }
     
     // All should return valid results (rate limited requests use fallback)
-    const allValid = results.every(r => r.urgency !== undefined && Array.isArray(r.needs));
+    const allValid = results.every(r => r.parsedData.urgency !== undefined && Array.isArray(r.parsedData.needs));
     assert("all requests return valid results", allValid, true);
   }
 
@@ -147,9 +147,9 @@ async function runTests() {
     const validText = "Medical emergency, 5 people";
     const result = await parseWithGemini(validText);
     console.log("  valid result:", result);
-    assert("has urgency", result.urgency !== undefined, true);
-    assert("has needs", Array.isArray(result.needs), true);
-    assert("has people_count", typeof result.people_count === 'number', true);
+    assert("has urgency", result.parsedData.urgency !== undefined, true);
+    assert("has needs", Array.isArray(result.parsedData.needs), true);
+    assert("has people_count", typeof result.parsedData.people_count === 'number', true);
   }
 
   // Test 11: Metrics tracking
