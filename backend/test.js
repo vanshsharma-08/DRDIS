@@ -1,5 +1,5 @@
 // This script acts like your React frontend and pings your live server directly.
-fetch('http://localhost:3001/analyze', {
+fetch('https://drdis.onrender.com/analyze/analyze', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
