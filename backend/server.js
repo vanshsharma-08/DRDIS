@@ -249,3 +249,7 @@ setInterval(() => {
 process.on('exit', (code) => {
   console.log(`[FATAL] Server is exiting with code: ${code}`);
 });
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`✅ [SUCCESS] Backend server is running on port ${PORT}`);
+});
