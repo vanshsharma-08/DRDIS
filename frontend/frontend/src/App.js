@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import InputPanel, { DEFAULT_REQUESTS } from "./components/InputPanel";
 import OutputPanel from "./components/OutputPanel";
 
-const API_URL = "http://localhost:3001/analyze";
+const API_URL = "https://drdis.onrender.com/analyze";
 
 function validateSingleRequest(text) {
   const trimmed = text.trim();
