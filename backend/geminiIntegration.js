@@ -282,7 +282,7 @@ function handleError(error, context) {
   
   // In production, this would log to a monitoring service
   // For now, we just suppress the error to prevent crashes
-  console.error(`[Gemini Integration] Error in ${safeContext}: ${errorMessage}`);
+  // console.error(`[Gemini Integration] Error in ${safeContext}: ${errorMessage}`);
 }
 
 // ─── Main Integration Function ────────────────────────────────────────────────
@@ -315,7 +315,6 @@ async function parseWithGemini(text, req = null) {
 
     // Check input length (reject if exceeded)
     if (text.length > MAX_INPUT_LENGTH) {
-      console.warn(`[Gemini Integration] Input too long: ${text.length} chars`);
       metrics.fallbackUsage++;
       return { parsedData: ruleBasedParse(text.substring(0, MAX_INPUT_LENGTH)), source: "rule" };
     }
@@ -323,7 +322,6 @@ async function parseWithGemini(text, req = null) {
     // Rate limiting check
     const ip = getClientIP(req);
     if (isRateLimited(ip)) {
-      console.warn(`[Gemini Integration] Rate limit exceeded for IP: ${ip}`);
       metrics.rateLimitTriggers++;
       metrics.fallbackUsage++;
       return { parsedData: ruleBasedParse(text), source: "rule" };
@@ -342,14 +340,12 @@ async function parseWithGemini(text, req = null) {
 
     // Calculate confidence
     const confidence = calculateConfidence(trimmedText);
-    console.log("confidence:", confidence);
 
     // Rule-based parsing (primary)
     const ruleBasedResult = ruleBasedParse(trimmedText);
 
     // Only call Gemini if confidence is low
     if (confidence < CONFIDENCE_THRESHOLD) {
-      console.log("source:", "gemini");
       try {
         // Track Gemini call
         metrics.geminiCalls++;

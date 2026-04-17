@@ -19,6 +19,43 @@ const TIMEOUT_MS = 4000;
 
 const VALID_URGENCIES = ['HIGH', 'MEDIUM', 'LOW'];
 
+// ─── System Prompt for Gemini ──────────────────────────────────────────────────
+
+/**
+ * System prompt for Gemini to act as a Senior Triage Dispatcher
+ * Instructs the LLM to output forensic explainability reasons
+ */
+const GEMINI_SYSTEM_PROMPT = `You are a Senior Triage Dispatcher for disaster response. Your role is to analyze incoming requests and output structured JSON with forensic explainability.
+
+Analyze the input for:
+1. Emotional state indicators (e.g., "please help", "urgent", "critical")
+2. Ambiguity and contradictions (e.g., "low urgency but immediate rescue")
+3. Concrete disaster indicators (e.g., "trapped", "flood", "injured")
+
+Rules for contradiction handling:
+- If input says "low urgency but immediate rescue", prioritize "rescue" as a life-threat anomaly
+- If emotional distress is high but concrete indicators are low, categorize as LOW priority to conserve critical rescue teams
+- Always prioritize life-threat keywords over stated urgency
+
+Output format:
+{
+  "urgency": "HIGH|MEDIUM|LOW",
+  "needs": ["array", "of", "needs"],
+  "people_count": number,
+  "location_tag": "extracted spatial/location context (e.g., 'Sector 5', 'Shelter Camp A', 'Unknown Area')",
+  "severity_reason": " forensic explanation of analysis",
+  "has_medical": boolean,
+  "has_vulnerable": boolean
+}
+
+Location extraction rules:
+- Look for area keywords: sector, shelter, street, village, district, zone, area, block, ward, camp, colony, town, city, hospital, school, bridge, road, lane, market, station, airport, port, park, plaza, square
+- Extract the keyword and 2-3 succeeding words as the location_tag
+- If no location is found, set location_tag to "Unknown Area"
+
+Example output for ambiguous input:
+"Input lacks concrete disaster indicators but contains high emotional distress ('please help'). Categorizing as LOW priority to conserve critical rescue teams, while routing to general dispatch for human verification."`;
+
 // ─── Simulated Gemini Response ────────────────────────────────────────────────
 
 /**
@@ -48,12 +85,16 @@ function simulateGeminiCall(text) {
     urgency,
     needs,
     people_count: peopleCount,
-    location,
+    location_tag: location,
     severity_reason: severityReason,
     has_medical: hasMedical,
     has_vulnerable: hasVulnerable,
   };
 
+  // Enforce determinism settings (simulated)
+  // In a real API call, these would be passed as parameters:
+  // temperature: 0.0, topK: 1, topP: 0.1
+  // For simulation, we just ensure the output is deterministic
   return Promise.resolve(JSON.stringify(response));
 }
 
@@ -114,13 +155,9 @@ function detectSimulatedVulnerable(text) {
 }
 
 function extractSimulatedLocation(text) {
-  // Try to extract a location-like phrase after prepositions
-  const match = text.match(/(?:at|in|near|from|around)\s+(?:the\s+)?([a-z][a-z\s]{2,30}?)(?:\.|,|$|!|\?)/i);
-  if (match && match[1]) {
-    const loc = match[1].trim();
-    if (loc.length >= 3 && loc.length <= 50) return loc;
-  }
-  return null;
+  if (!text) return "Unknown Area";
+  let match = text.match(/\b(sector|zone|ward|shelter|district|street|village|hospital|camp)\s+([a-zA-Z0-9]+)\b/i);
+  return match ? match[0] : "Unknown Area";
 }
 
 function buildSimulatedReason(urgency, needs, hasMedical, hasVulnerable, peopleCount) {
@@ -181,11 +218,11 @@ function validateAndFill(parsed, originalText) {
     result.people_count = 1;
   }
 
-  // location
-  if (typeof parsed.location === 'string' && parsed.location.trim().length > 0) {
-    result.location = parsed.location.trim();
+  // location_tag
+  if (typeof parsed.location_tag === 'string' && parsed.location_tag.trim().length > 0) {
+    result.location_tag = parsed.location_tag.trim();
   } else {
-    result.location = null;
+    result.location_tag = 'Unknown Area';
   }
 
   // severity_reason

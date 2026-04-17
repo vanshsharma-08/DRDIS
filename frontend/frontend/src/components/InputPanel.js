@@ -6,25 +6,29 @@ const DEFAULT_REQUESTS = [
   "elderly person needs medical help",
 ];
 
-function InputPanel({ requests, onChange, onAnalyze, loading, winningIndex }) {
+function InputPanel({ requests, onChange, onAnalyze, loading, selectedText }) {
   return (
     <div style={styles.card}>
-      <h2 style={styles.title}>Disaster Requests</h2>
-      <p style={styles.subtitle}>Enter up to 3 disaster relief requests below.</p>
+      <h2 style={styles.title}>Community Field Reports (Ingestion)</h2>
+      <p style={styles.subtitle}>Enter scattered field surveys or community requests below.</p>
 
       {requests.map((req, index) => {
-        const isWinning = winningIndex === index;
+        // Inline matching logic: determine if this box is selected based on text comparison
+        const currentText = (typeof req === 'string' ? req : req?.text || "").trim();
+        const winText = (selectedText || "").trim();
+        const isSelected = currentText !== "" && currentText === winText;
+        
         return (
           <div 
             key={index} 
             style={{
               ...styles.fieldGroup,
-              ...(isWinning && styles.fieldGroupWinning)
+              ...(isSelected && styles.fieldGroupWinning)
             }}
           >
             <div style={styles.labelRow}>
               <label style={styles.label}>Request {index + 1}</label>
-              {isWinning && (
+              {isSelected && (
                 <span style={styles.winningBadge}>
                   <span style={styles.winningBadgeIcon}>✓</span>
                   Selected
@@ -34,7 +38,7 @@ function InputPanel({ requests, onChange, onAnalyze, loading, winningIndex }) {
             <textarea
               style={{
                 ...styles.textarea,
-                ...(isWinning && styles.textareaWinning)
+                ...(isSelected && styles.textareaWinning)
               }}
               value={req}
               onChange={(e) => onChange(index, e.target.value)}
@@ -50,7 +54,7 @@ function InputPanel({ requests, onChange, onAnalyze, loading, winningIndex }) {
         onClick={onAnalyze}
         disabled={loading}
       >
-        {loading ? "Analyzing..." : "Analyze"}
+        {loading ? "Processing..." : "Analyze"}
       </button>
     </div>
   );

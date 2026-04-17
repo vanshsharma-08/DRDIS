@@ -8,7 +8,7 @@ const { safeGeminiCall } = require('./safeGeminiCall');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const REQUIRED_KEYS = ['urgency', 'needs', 'people_count', 'location', 'severity_reason', 'has_medical', 'has_vulnerable'];
+const REQUIRED_KEYS = ['urgency', 'needs', 'people_count', 'location_tag', 'severity_reason', 'has_medical', 'has_vulnerable'];
 const VALID_URGENCIES = ['HIGH', 'MEDIUM', 'LOW'];
 
 function assertShape(result) {
@@ -31,8 +31,8 @@ function assertShape(result) {
   if (typeof result.people_count !== 'number' || !Number.isFinite(result.people_count) || result.people_count < 1)
     throw new Error(`people_count must be a finite number ≥ 1, got: ${result.people_count}`);
 
-  if (result.location !== null && typeof result.location !== 'string')
-    throw new Error(`location must be null or a string, got: ${typeof result.location}`);
+  if (typeof result.location_tag !== 'string' || result.location_tag.trim().length === 0)
+    throw new Error(`location_tag must be a non-empty string, got: ${typeof result.location_tag}`);
 
   if (typeof result.severity_reason !== 'string' || result.severity_reason.trim().length === 0)
     throw new Error(`severity_reason must be a non-empty string`);
@@ -176,7 +176,8 @@ await asyncTest('has_vulnerable detected from simulated response', async () => {
 
 await asyncTest('location extracted from simulated response', async () => {
   const r = await safeGeminiCall('Flood at the village market');
-  if (r.location === null) throw new Error('Expected a location but got null');
+  if (typeof r.location_tag !== 'string' || r.location_tag.trim().length === 0)
+    throw new Error('Expected a non-empty location_tag');
 });
 
 // ── 3. Safe defaults on bad input ─────────────────────────────────────────────

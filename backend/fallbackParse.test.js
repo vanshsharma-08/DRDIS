@@ -9,7 +9,7 @@ const { fallbackParse } = require('./fallbackParse');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const REQUIRED_KEYS = ['urgency', 'needs', 'people_count', 'location', 'severity_reason', 'has_medical', 'has_vulnerable'];
+const REQUIRED_KEYS = ['urgency', 'needs', 'people_count', 'location_tag', 'severity_reason', 'has_medical', 'has_vulnerable'];
 const VALID_URGENCIES = ['HIGH', 'MEDIUM', 'LOW'];
 
 function assertShape(result) {
@@ -32,8 +32,8 @@ function assertShape(result) {
   if (typeof result.people_count !== 'number' || !Number.isFinite(result.people_count) || result.people_count < 0)
     throw new Error(`people_count must be a finite number ≥ 0, got: ${result.people_count}`);
 
-  if (result.location !== null && typeof result.location !== 'string')
-    throw new Error(`location must be null or a string, got: ${typeof result.location}`);
+  if (typeof result.location_tag !== 'string' || result.location_tag.trim().length === 0)
+    throw new Error(`location_tag must be a non-empty string, got: ${typeof result.location_tag}`);
 
   if (typeof result.severity_reason !== 'string' || result.severity_reason.trim().length === 0)
     throw new Error(`severity_reason must be a non-empty string`);
@@ -131,10 +131,11 @@ test('people_count is always a finite number ≥ 0', () => {
   });
 });
 
-test('location is always null (safe default — no NLP)', () => {
+test('location_tag is always a non-empty string', () => {
   ['near the river', 'sector 4', ''].forEach((input) => {
     const r = fallbackParse(input);
-    if (r.location !== null) throw new Error(`Expected location=null but got: ${r.location}`);
+    if (typeof r.location_tag !== 'string' || r.location_tag.trim().length === 0)
+      throw new Error(`Expected location_tag to be a non-empty string but got: "${r.location_tag}"`);
   });
 });
 
@@ -366,8 +367,8 @@ test('medical flag appears in severity_reason', () => {
 
 test('vulnerable flag appears in severity_reason', () => {
   const r = fallbackParse('Elderly people are stranded');
-  if (!r.severity_reason.toLowerCase().includes('vulnerable'))
-    throw new Error(`Expected "vulnerable" in severity_reason but got: "${r.severity_reason}"`);
+  if (!r.severity_reason.includes('[vulnerable]'))
+    throw new Error(`Expected "[vulnerable]" in severity_reason but got: "${r.severity_reason}"`);
 });
 
 test('people_count > 1 appears in severity_reason', () => {
@@ -384,7 +385,8 @@ test('empty string → valid shape with safe defaults', () => {
   assertShape(r);
   if (r.urgency !== 'LOW') throw new Error(`Expected LOW default but got ${r.urgency}`);
   if (r.people_count !== 0)   throw new Error(`Expected people_count=0 but got ${r.people_count}`);
-  if (r.location !== null)    throw new Error(`Expected location=null but got ${r.location}`);
+  if (typeof r.location_tag !== 'string' || r.location_tag.trim().length === 0)
+    throw new Error(`Expected location_tag to be a non-empty string but got: "${r.location_tag}"`);
   if (r.needs.length !== 0)   throw new Error(`Expected empty needs but got [${r.needs.join(', ')}]`);
   if (r.has_medical !== false) throw new Error('Expected has_medical=false');
   if (r.has_vulnerable !== false) throw new Error('Expected has_vulnerable=false');

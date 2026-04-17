@@ -53,6 +53,13 @@ const VULNERABLE_KEYWORDS = [
   'wheelchair', 'blind', 'deaf', 'special needs', 'vulnerable',
 ];
 
+const LOCATION_KEYWORDS = [
+  'sector', 'shelter', 'street', 'village', 'district', 'zone',
+  'area', 'block', 'ward', 'camp', 'colony', 'town', 'city',
+  'hospital', 'school', 'bridge', 'road', 'lane', 'market',
+  'station', 'airport', 'port', 'park', 'plaza', 'square',
+];
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
@@ -107,39 +114,11 @@ function detectUrgency(normalizedText) {
   return 'LOW'; // safe default — no meaningful keywords found
 }
 
-/**
- * Extracts the first number found in text as people_count.
- * Looks for patterns like "50 people", "group of 12", "about 30", or bare numbers.
- * Returns 1 as safe default if no number is found.
- *
- * @param {string} text  (original, not normalized — preserves digits)
- * @returns {number}
- */
-function extractPeopleCount(text) {
-  if (typeof text !== 'string') return 0;
-
-  // Priority 1: explicit "N people/persons/survivors/victims/families/individuals"
-  const explicitMatch = text.match(/(\d+)\s*(?:people|persons?|survivors?|victims?|families|individuals?|residents?|civilians?|refugees?)/i);
-  if (explicitMatch) {
-    const n = parseInt(explicitMatch[1], 10);
-    if (!isNaN(n) && n > 0) return n;
-  }
-
-  // Priority 2: "group of N" / "about N" / "around N" / "approximately N" / "over N"
-  const groupMatch = text.match(/(?:group\s+of|about|around|approximately|over|nearly|at\s+least)\s+(\d+)/i);
-  if (groupMatch) {
-    const n = parseInt(groupMatch[1], 10);
-    if (!isNaN(n) && n > 0) return n;
-  }
-
-  // Priority 3: any standalone number in the text
-  const bareMatch = text.match(/\b(\d+)\b/);
-  if (bareMatch) {
-    const n = parseInt(bareMatch[1], 10);
-    if (!isNaN(n) && n > 0) return n;
-  }
-
-  return 0; // safe default
+function safeExtractPeople(text) {
+    if (!text) return 0;
+    const cleanText = text.replace(/(?:survey|id|report|sector|zone|ward)\s*#?\s*\d+/gi, '');
+    const match = cleanText.match(/(\d+)\s*(?:[a-zA-Z]+\s*){0,3}(?:people|injured|bleeding|affected|trapped|families|victims)/i);
+    return match ? parseInt(match[1], 10) : 0;
 }
 
 /**
@@ -179,6 +158,12 @@ function detectHasVulnerable(normalizedText) {
   return containsAnyKeyword(normalizedText, VULNERABLE_KEYWORDS);
 }
 
+function safeExtractLocation(text) {
+    if (!text) return "Unknown Area";
+    const match = text.match(/(?:sector|zone|ward|shelter|district|street|village|hospital|camp)\s+[a-zA-Z0-9]+/i);
+    return match ? match[0].trim() : "Unknown Area";
+}
+
 /**
  * Builds a human-readable severity reason from detected signals.
  * Always returns a non-empty string.
@@ -206,7 +191,12 @@ function buildSeverityReason(urgency, needs, hasMedical, hasVulnerable, peopleCo
       ? `${peopleCount} people`
       : "unknown number of people";
   
-  return `Detected ${urgency} urgency ${needType} situation affecting ${peopleText}. Prioritized due to ${needReason}.`;
+  const flags = [];
+  if (hasMedical) flags.push('medical');
+  if (hasVulnerable) flags.push('vulnerable');
+  const flagText = flags.length > 0 ? ` [${flags.join(', ')}]` : '';
+  
+  return `Detected ${urgency} urgency ${needType} situation affecting ${peopleText}. Prioritized due to ${needReason}.${flagText}`;
 }
 
 // ─── Main Export ──────────────────────────────────────────────────────────────
@@ -232,12 +222,12 @@ function fallbackParse(text) {
 
   const urgency      = detectUrgency(normalized);
   const needs        = detectNeeds(normalized);
-  const people_count = extractPeopleCount(text);   // pass original to preserve digit casing
+  const people_count = safeExtractPeople(text);   // pass original to preserve digit casing
   const has_medical  = detectHasMedical(normalized);
   const has_vulnerable = detectHasVulnerable(normalized);
 
-  // Location: not extractable deterministically without NLP/geocoding → null (safe default)
-  const location = null;
+  // Location: extract from area keywords
+  const location_tag = safeExtractLocation(text);
 
   const severity_reason = buildSeverityReason(urgency, needs, has_medical, has_vulnerable, people_count);
 
@@ -245,7 +235,7 @@ function fallbackParse(text) {
     urgency,
     needs,
     people_count,
-    location,
+    location_tag,
     severity_reason,
     has_medical,
     has_vulnerable,

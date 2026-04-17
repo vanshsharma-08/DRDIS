@@ -12,7 +12,7 @@
  */
 
 const { validateInput } = require('./validator');
-const { parseWithGemini } = require('./geminiIntegration');
+const { fallbackParse } = require('./fallbackParse');
 
 // ─── Priority Constants ───────────────────────────────────────────────────────
 
@@ -31,64 +31,22 @@ const PRIORITY_REASON_MAP = {
 // ─── Helper Functions ─────────────────────────────────────────────────────────
 
 /**
- * Splits text by comma, +, and to process segments independently.
- * @param {string} text
- * @returns {string[]}
- */
-function splitTextIntoSegments(text) {
-  if (typeof text !== 'string') return [];
-  
-  // Split by comma, +, and (case-insensitive)
-  const segments = text.split(/[,+]|and/gi)
-    .map(s => s.trim())
-    .filter(s => s.length > 0);
-  
-  return segments;
-}
-
-/**
- * Parses all validated requests using parseWithGemini.
+ * Parses all validated requests using fallbackParse.
  * Always returns an array of the same length as input.
  * Never throws.
  *
  * @param {Array<{ text: string }>} requests - Validated request objects
- * @returns {Promise<Array<{ parsedData: object, source: string }>>} - Parsed results from parseWithGemini with source
+ * @returns {Array<object>} - Parsed results from fallbackParse
  */
-async function parseAllRequests(requests) {
+function parseAllRequests(requests) {
   if (!Array.isArray(requests)) return [];
-
   const results = [];
   for (let i = 0; i < requests.length; i++) {
     const text = requests[i] && typeof requests[i].text === 'string' ? requests[i].text : '';
-    
-    // Split into segments and parse each independently
-    const segments = splitTextIntoSegments(text);
-    let parsed;
-    let source = 'rule'; // Default source
-    if (segments.length === 0) {
-      const result = await parseWithGemini(text);
-      parsed = result.parsedData;
-      source = result.source;
-    } else {
-      // Parse each segment and merge results
-      const parsedSegments = [];
-      for (const seg of segments) {
-        const result = await parseWithGemini(seg);
-        parsedSegments.push(result.parsedData);
-        // Use the source from the first segment
-        if (i === 0) {
-          source = result.source;
-        }
-      }
-      parsed = mergeParsedSegments(parsedSegments);
-    }
-    
-    // Ensure needs array is not empty
-    if (parsed.needs.length === 0) {
-      parsed.needs = ['general'];
-    }
-    
-    results.push({ parsedData: parsed, source });
+    // DO NOT SPLIT. Parse the whole text at once.
+    const parsed = fallbackParse(text);
+    if (parsed.needs.length === 0) parsed.needs = ['general'];
+    results.push(parsed);
   }
   return results;
 }
@@ -113,7 +71,7 @@ function mergeParsedSegments(segments) {
     urgency: 'LOW',
     needs: [],
     people_count: 0,
-    location: null,
+    location_tag: 'Unknown Area',
     severity_reason: '',
     has_medical: false,
     has_vulnerable: false,
@@ -136,12 +94,17 @@ function mergeParsedSegments(segments) {
       }
     });
     
-    // Sum people_count
-    merged.people_count += seg.people_count || 0;
+    // Use max people_count instead of summing to avoid aggregation bugs
+    merged.people_count = Math.max(merged.people_count, seg.people_count || 0);
     
     // Merge medical/vulnerable flags (OR logic)
     merged.has_medical = merged.has_medical || seg.has_medical;
     merged.has_vulnerable = merged.has_vulnerable || seg.has_vulnerable;
+    
+    // Merge location (use first non-Unknown Area)
+    if (seg.location_tag && seg.location_tag !== 'Unknown Area' && merged.location_tag === 'Unknown Area') {
+      merged.location_tag = seg.location_tag;
+    }
   });
   
   merged.urgency = highestUrgency;
@@ -245,42 +208,56 @@ function assignPriority(parsed) {
  *   }>
  * }}
  */
-async function processRequests(requests) {
-  // Step 1: Validate input
-  const validation = validateInput(requests);
+function processRequests(requests) {
+  try {
+    // Guard Clause (Input Type): First, check if the input is truthy and is an Array.
+    if (!requests || !Array.isArray(requests)) {
+      return {
+        error: 'Validation failed',
+        details: ['Input must be a non-empty array'],
+      };
+    }
 
-  if (!validation.valid) {
+    // Step 1: Validate input
+    const validation = validateInput(requests);
+
+    if (!validation.valid) {
+      return {
+        error: 'Validation failed',
+        details: validation.errors || [],
+      };
+    }
+
+    // Step 2: Normalize — validation.data is already [{ text: trimmedText }]
+    const normalized = validation.data;
+
+    // Step 3: Parse all requests
+    const parsedResults = parseAllRequests(normalized);
+
+    // Step 4: Assign priority for each parsed result
+    const processed = [];
+    for (let i = 0; i < normalized.length; i++) {
+      const originalText = normalized[i].text;
+      const parsed = parsedResults[i];
+      const { priority, priority_reason } = assignPriority(parsed);
+
+      processed.push({
+        original_text: originalText,
+        parsed,
+        priority,
+        priority_reason,
+        source: 'rule',
+      });
+    }
+
+    // Step 5: Return
+    return { processed };
+  } catch (err) {
     return {
       error: 'Validation failed',
-      details: validation.errors,
+      details: [err.message || 'Internal processing error'],
     };
   }
-
-  // Step 2: Normalize — validation.data is already [{ text: trimmedText }]
-  const normalized = validation.data;
-
-  // Step 3: Parse all requests
-  const parsedResults = await parseAllRequests(normalized);
-
-  // Step 4: Assign priority for each parsed result
-  const processed = [];
-  for (let i = 0; i < normalized.length; i++) {
-    const originalText = normalized[i].text;
-    const parsed = parsedResults[i].parsedData;
-    const source = parsedResults[i].source;
-    const { priority, priority_reason } = assignPriority(parsed);
-
-    processed.push({
-      original_text: originalText,
-      parsed,
-      priority,
-      priority_reason,
-      source,
-    });
-  }
-
-  // Step 5: Return
-  return { processed };
 }
 
 module.exports = { processRequests, parseAllRequests, assignPriority };

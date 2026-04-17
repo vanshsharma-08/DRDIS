@@ -33,23 +33,23 @@ function assertNoThrow(label, fn) {
 
 // ---------------------------------------------------------------------------
 // Test 1: highest score wins
-// req A: HIGH + medical + 30 people → 14
-// req B: MEDIUM + vulnerable + 10 people → 9
+// req A: HIGH + medical + 30 people → 172.37
+// req B: MEDIUM + vulnerable + 10 people → 55.61
 // ---------------------------------------------------------------------------
-console.log("\nTest 1 — highest score selected (expect score=14)");
+console.log("\nTest 1 — highest score selected (expect score=172.37)");
 {
   const A = { urgency: "HIGH", has_medical: true, has_vulnerable: false, scale: 30, people_count: 30 };
   const B = { urgency: "MEDIUM", has_medical: false, has_vulnerable: true, scale: 10, people_count: 10 };
   const result = selectTopRequest([A, B]);
-  assert("decision_score", result.decision_score, 14);
+  assert("decision_score", result.decision_score, 172.37);
   assert("selected is A", result.selected_request === A, true);
   assert("all_requests length", result.all_requests.length, 2);
 }
 
 // ---------------------------------------------------------------------------
 // Test 2: tie-breaking by people_count — higher wins
-// A: HIGH urgency + people_count=5 → score = 9 (scale=0)
-// B: HIGH urgency + people_count=50 → score = 11 (scale=2)
+// A: HIGH urgency + people_count=5 → score = 30 (scale=0)
+// B: HIGH urgency + people_count=50 → score = 55.61 (scale=2)
 // B wins because higher score
 // ---------------------------------------------------------------------------
 console.log("\nTest 2 — higher people_count wins (expect B selected)");
@@ -57,7 +57,7 @@ console.log("\nTest 2 — higher people_count wins (expect B selected)");
   const A = { urgency: "HIGH", has_medical: false, has_vulnerable: false, people_count: 5 };
   const B = { urgency: "HIGH", has_medical: false, has_vulnerable: false, people_count: 50 };
   const result = selectTopRequest([A, B]);
-  assert("decision_score", result.decision_score, 11);
+  assert("decision_score", result.decision_score, 55.61);
   assert("selected is B", result.selected_request === B, true);
 }
 
@@ -124,14 +124,14 @@ console.log("\nTest 8 — all_requests structure check");
   const A = { urgency: "LOW", has_medical: false, has_vulnerable: false, scale: 0, people_count: 0 };
   const B = { urgency: "HIGH", has_medical: false, has_vulnerable: false, scale: 0, people_count: 0 };
   const result = selectTopRequest([A, B]);
-  assert("all_requests[0].score", result.all_requests[0].score, 3);
-  assert("all_requests[1].score", result.all_requests[1].score, 9);
+  assert("all_requests[0].score", result.all_requests[0].score, 20);
+  assert("all_requests[1].score", result.all_requests[1].score, 30);
   assert("all_requests[0].original === A", result.all_requests[0].original === A, true);
 }
 
 // ---------------------------------------------------------------------------
 // Test 9: rank field — distinct scores get distinct ranks
-// A: score=14 → rank 1, B: score=9 → rank 2, C: score=3 → rank 3
+// A: score=172.37 → rank 1, B: score=55.61 → rank 2, C: score=20 → rank 3
 // ---------------------------------------------------------------------------
 console.log("\nTest 9 — rank field with distinct scores");
 {
@@ -142,15 +142,15 @@ console.log("\nTest 9 — rank field with distinct scores");
   const rankA = result.all_requests.find((r) => r.original === A).rank;
   const rankB = result.all_requests.find((r) => r.original === B).rank;
   const rankC = result.all_requests.find((r) => r.original === C).rank;
-  assert("rank of A (score=14)", rankA, 1);
-  assert("rank of B (score=9)", rankB, 2);
-  assert("rank of C (score=3)", rankC, 3);
+  assert("rank of A (score=172.37)", rankA, 1);
+  assert("rank of B (score=55.61)", rankB, 2);
+  assert("rank of C (score=20)", rankC, 3);
 }
 
 // ---------------------------------------------------------------------------
 // Test 10: rank field — tied scores share the same rank
-// A and B: both HIGH urgency + people_count=5 → score=9 → both rank 1
-// C: LOW urgency → score=3 → rank 3
+// A and B: both HIGH urgency + people_count=5 → score=30 → both rank 1
+// C: LOW urgency → score=20 → rank 3
 // ---------------------------------------------------------------------------
 console.log("\nTest 10 — rank field with tied scores");
 {
@@ -161,9 +161,9 @@ console.log("\nTest 10 — rank field with tied scores");
   const rankA = result.all_requests.find((r) => r.original === A).rank;
   const rankB = result.all_requests.find((r) => r.original === B).rank;
   const rankC = result.all_requests.find((r) => r.original === C).rank;
-  assert("rank of A (tied score=9)", rankA, 1);
-  assert("rank of B (tied score=9)", rankB, 1);
-  assert("rank of C (score=3) → rank 3", rankC, 3);
+  assert("rank of A (tied score=30)", rankA, 1);
+  assert("rank of B (tied score=30)", rankB, 1);
+  assert("rank of C (score=20) → rank 3", rankC, 3);
 }
 
 // ---------------------------------------------------------------------------

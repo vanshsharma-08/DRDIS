@@ -5,7 +5,7 @@ function OutputPanel({ results, loading, error }) {
     return (
       <div style={styles.loadingContainer}>
         <div style={styles.loadingSpinner}></div>
-        <h2 style={styles.loadingTitle}>Analyzing Emergency Requests...</h2>
+        <h2 style={styles.loadingTitle}>Analyzing Field Reports...</h2>
         <p style={styles.loadingSubtitle}>Evaluating priorities and matching resources</p>
       </div>
     );
@@ -28,18 +28,18 @@ function OutputPanel({ results, loading, error }) {
       <div style={styles.emptyContainer}>
         <div style={styles.emptyIcon}>🚨</div>
         <h2 style={styles.emptyTitle}>Final Decision Dashboard</h2>
-        <p style={styles.emptySubtitle}>Enter disaster requests and click Analyze to see results</p>
+        <p style={styles.emptySubtitle}>Enter field reports and click Analyze to see results</p>
       </div>
     );
   }
 
-  const { selected_request, assigned_volunteer, decision_score, other_requests, source, reasons } = results;
-  const data = selected_request || {};
-  const team = assigned_volunteer || {};
-  
-  // Calculate progress bar percentage (max score assumed to be 200)
-  const maxScore = 200;
-  const progressPercentage = Math.min((decision_score / maxScore) * 100, 100);
+    const { selected_request, assigned_volunteer, decision_score, other_requests, source, reasons } = results || {};
+    const data = selected_request || {};
+    const team = assigned_volunteer || {};
+    
+    // Calculate progress bar percentage (max score assumed to be 200)
+    const maxScore = 200;
+    const progressPercentage = Math.min((decision_score || 0) / maxScore * 100, 100);
 
   // Handle reasons array or fallback to data.reasons
   const reasonsList = reasons || data.reasons || [];
@@ -72,37 +72,33 @@ function OutputPanel({ results, loading, error }) {
 
   const sourceConfig = getSourceDisplay(source);
 
-  // Get urgency config
-  const getUrgencyConfig = (urgency) => {
-    switch (urgency) {
-      case 'HIGH': return { 
+  // Get urgency config based on decision_score
+  const getUrgencyConfig = (score) => {
+    if (score >= 100) {
+      return { 
         color: '#dc2626', 
         bgColor: '#fef2f2',
         label: 'HIGH PRIORITY', 
         icon: '🔴' 
       };
-      case 'MEDIUM': return { 
+    } else if (score >= 50) {
+      return { 
         color: '#d97706', 
         bgColor: '#fffbeb',
         label: 'MEDIUM PRIORITY', 
         icon: '🟠' 
       };
-      case 'LOW': return { 
+    } else {
+      return { 
         color: '#059669', 
         bgColor: '#ecfdf5',
         label: 'LOW PRIORITY', 
         icon: '🟢' 
       };
-      default: return { 
-        color: '#6b7280', 
-        bgColor: '#f9fafb',
-        label: 'UNKNOWN', 
-        icon: '⚪' 
-      };
     }
   };
 
-  const urgencyConfig = getUrgencyConfig(data.urgency);
+  const urgencyConfig = getUrgencyConfig(decision_score);
 
   // Get reason icons
   const getReasonIcon = (reasonText) => {
@@ -120,7 +116,7 @@ function OutputPanel({ results, loading, error }) {
       {/* Selected Emergency Callout */}
       <div style={styles.selectedEmergencyCard}>
         <div style={styles.selectedHeader}>
-          <span style={styles.selectedLabel}>Selected Emergency</span>
+          <span style={styles.selectedLabel}>Prioritized Community Need</span>
           <span style={{
             ...styles.selectedSource,
             backgroundColor: sourceConfig.bgColor,
@@ -131,12 +127,12 @@ function OutputPanel({ results, loading, error }) {
           </span>
         </div>
         <div style={styles.selectedContent}>
-          <p 
-            style={styles.selectedText}
-            title={data.text || 'No text available'}
-          >
-            {data.text || 'No emergency selected'}
-          </p>
+            <p 
+              style={styles.selectedText}
+              title={data?.text || 'No text available'}
+            >
+              {data?.text || 'No community need selected'}
+            </p>
         </div>
       </div>
 
@@ -188,7 +184,7 @@ function OutputPanel({ results, loading, error }) {
             <div style={styles.infoContent}>
               <span style={styles.infoLabel}>People Affected</span>
               <span style={styles.infoValue}>
-                {data.people_count > 0 ? data.people_count : 'Unknown'}
+                {data?.people_count > 0 ? data.people_count : 'Unknown'}
               </span>
             </div>
           </div>
@@ -200,7 +196,19 @@ function OutputPanel({ results, loading, error }) {
             <div style={styles.infoContent}>
               <span style={styles.infoLabel}>Critical Need</span>
               <span style={styles.infoValue}>
-                {data.needs?.[0] ? data.needs[0].toUpperCase() : 'UNKNOWN'}
+                {data?.needs?.[0] ? data.needs[0].toUpperCase() : 'UNKNOWN'}
+              </span>
+            </div>
+          </div>
+
+          <div style={styles.infoItem}>
+            <div style={styles.infoIconWrapper}>
+              <span style={styles.infoIcon}>📍</span>
+            </div>
+            <div style={styles.infoContent}>
+              <span style={styles.infoLabel}>Location</span>
+              <span style={styles.infoValue}>
+                {data?.location_tag || 'Unknown Area'}
               </span>
             </div>
           </div>
@@ -328,11 +336,9 @@ const styles = {
     lineHeight: '1.4',
     margin: 0,
     flex: 1,
-    display: '-webkit-box',
-    WebkitLineClamp: 3,
-    WebkitBoxOrient: 'vertical',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
+    wordBreak: 'break-word',
+    whiteSpace: 'normal',
+    overflowWrap: 'anywhere',
   },
 
   // Decision Card
@@ -425,7 +431,7 @@ const styles = {
   },
   infoGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
+    gridTemplateColumns: 'repeat(4, 1fr)',
     gap: '16px',
   },
   infoItem: {
