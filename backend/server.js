@@ -233,11 +233,9 @@ app.post('/analyze', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────
-app.listen(3001, () => {
-  console.log('✅ [SUCCESS] Backend server is running on port 3001');
-});
-const server = app.listen(3001, () => {
-  console.log('✅ [SUCCESS] Backend server is running on port 3001');
+const PORT = process.env.PORT || 3001;
+const server = app.listen(PORT, () => {
+  console.log(`✅ [SUCCESS] Backend server is running on port ${PORT}`);
 });
 
 // 1. The Heartbeat: Forces Node.js to stay awake no matter what
@@ -248,8 +246,4 @@ setInterval(() => {
 // 2. The Trap: Catches anything trying to silently kill your app
 process.on('exit', (code) => {
   console.log(`[FATAL] Server is exiting with code: ${code}`);
-});
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`✅ [SUCCESS] Backend server is running on port ${PORT}`);
 });
