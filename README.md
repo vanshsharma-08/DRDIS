@@ -34,9 +34,23 @@ Open a terminal, navigate to the root directory, and run:
 cd backend
 npm install
 npm start
-### 2. Start the Frontend (The UI)
-Open a **second** terminal, navigate to the root directory, and run:
+### 1. Start the Backend (The Engine)
+Open a terminal, navigate to the root directory, and run:
+
 ```bash
+cd backend
+npm install
+npm start
+
+2. Start the Frontend (The UI)
+Open a second terminal, navigate to the root directory, and run:
+
+Bash
 cd frontend/frontend
 npm install
 npm start
+🌍 Next Steps: Deployment Pipeline
+While currently running locally for this prototype phase, the architecture is fully decoupled and container-ready. Future plans include deploying the Express backend to a scalable cloud provider (like Render or AWS Elastic Beanstalk) and hosting the React frontend via Vercel for global edge availability.
+
+
+The three backticks right after `npm start` in the first section are the magic fix. That tells Markdown to close the backend code box so the frontend heading can display properly!
