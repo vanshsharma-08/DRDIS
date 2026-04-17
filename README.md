@@ -1,5 +1,12 @@
 # 🚨 DRDIS: Disaster Relief Decision Intelligence System
 
+**🏆 Hackathon MVP — Live Links**
+* 🌍 **Live Web App (Frontend):** [https://drdis.netlify.app](https://drdis.netlify.app)
+* ⚙️ **Cloud API (Backend):** [https://drdis.onrender.com](https://drdis.onrender.com)
+
+> **Note to Judges:** The backend API is hosted on Render's Free Tier. It may take ~50 seconds to spin up on the very first request. Once awake, the deterministic rule-engine processes disaster reports in milliseconds.
+
+---
 **Turning chaotic field reports into actionable, prioritized intelligence in milliseconds.**
 
 ## 📖 The Problem
